@@ -1,13 +1,296 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserRole {
+  student
+  instructor
+  admin
+}
+
+enum AuthProvider {
+  local
+  google
+  facebook
+  github
+}
+
+enum CourseLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum CourseStatus {
+  draft
+  published
+  archived
+}
+
+enum MediaType {
+  video
+  audio
+  document
+}
+
+enum NotificationType {
+  info
+  warning
+  success
+  error
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+model User {
+  id         String       @id @default(cuid())
+  name       String
+  email      String       @unique
+  password   String? 
+  role       UserRole     @default(student)
+  provider   AuthProvider @default(local)
+  providerId String?      @unique 
+  avatar     String? 
+  isVerified Boolean      @default(false)
+  lastLogin  DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  courses        Course[]        @relation("InstructorCourses")
+  enrollments    Enrollment[]
+  certificates   Certificate[]
+  reviews        Review[]
+  studentAnswers StudentAnswer[]
+  notifications  Notification[]
+  payments       Payment[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses Course[]
+}
+
+model Course {
+  id            String       @id @default(cuid())
+  categoryId    String
+  instructorId  String
+  title         String
+  description   String
+  thumbnail     String?
+  price         Float        @default(0)
+  level         CourseLevel  @default(beginner)
+  status        CourseStatus @default(draft)
+  language      String       @default("en")
+  averageRating  Decimal @db.Decimal(3,2)        @default(0)
+  totalStudents Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  category     Category      @relation(fields: [categoryId], references: [id])
+  instructor   User          @relation("InstructorCourses", fields: [instructorId], references: [id])
+  sections     Section[]
+  enrollments  Enrollment[]
+  certificates Certificate[]
+  reviews      Review[]
+  payments     Payment[]
+
+  @@index([title])
+  @@index([categoryId])
+@@index([instructorId])
+}
+
+model Section {
+  id        String   @id @default(cuid())
+  courseId  String
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@unique([courseId, order])
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  sectionId   String
+  title       String
+  description String?
+  duration    Int      @default(0)
+  order       Int
+  isPreview   Boolean  @default(false)
+  resources   Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+ 
+  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  media   Media[]
+  quizzes Quiz[]
+
+  @@unique([sectionId, order])
+}
+
+model Media {
+  id        String    @id @default(cuid())
+  lessonId  String
+  url       String
+  type      MediaType
+  duration  Int?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  studentId   String
+  courseId    String
+  progress    Float     @default(0)
+  completed   Boolean   @default(false)
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+@@index([courseId])
+}
+
+model Certificate {
+  id                String   @id @default(cuid())
+  studentId         String
+  courseId          String
+  certificateNumber String   @unique
+  issueDate         DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  studentId String
+  courseId  String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+}
+
+model Quiz {
+  id        String   @id @default(cuid())
+  lessonId  String
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson    Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions Question[]
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  quizId    String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quiz           Quiz            @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  choices        Choice[]
+  studentAnswers StudentAnswer[]
+}
+
+model Choice {
+  id         String   @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  question       Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  studentAnswers StudentAnswer[]
+}
+
+model StudentAnswer {
+  id         String   @id @default(cuid())
+  studentId  String
+  questionId String
+  choiceId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  student  User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  choice   Choice   @relation(fields: [choiceId], references: [id])
+
+  @@unique([studentId, questionId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  text      String
+  type      NotificationType @default(info)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  studentId          String //studentId not userId because user can be instructor or student and we want to make sure that only student can pay for course
+  courseId        String
+  amount          Decimal @db.Decimal(10,2)
+  currency        String        @default("USD")
+  status          PaymentStatus @default(pending)
+  stripePaymentId String?       @unique
+  stripeSessionId String?       @unique
+  refundedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, courseId])
+  @@index([studentId])
+  @@index([stripePaymentId])
 }
