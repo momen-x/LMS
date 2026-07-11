@@ -10,4 +10,31 @@ export abstract class AuthRepository {
     id: string,
     refreshToken: string | null,
   ): Promise<User>;
+  abstract updateVerificationToken(
+    id: string,
+    verificationToken: string,
+  ): Promise<User>;
+  abstract updateEmailVerificationToken(
+    userId: string,
+    token: string | null,
+    expires: Date | null,
+  ): Promise<User>;
+  abstract saveEmailVerificationToken(
+    userId: string,
+    tokenHash: string,
+    expiresAt: Date,
+  ): Promise<void>;
+
+  abstract findByEmailVerificationToken(
+    tokenHash: string,
+  ): Promise<User | null>;
+
+  abstract markEmailAsVerified(userId: string): Promise<void>;
+  abstract savePasswordResetToken(
+    userId: string,
+    passwordResetToken: string,
+    passwordResetExpires: Date,
+  );
+  abstract resetPassword(userId: string, password: string): Promise<User>;
+  abstract findByPasswordResetToken(tokenHash: string): Promise<User | null>;
 }

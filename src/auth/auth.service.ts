@@ -20,16 +20,19 @@ import {
   getAuthCookieOptions,
   getClearAuthCookieOptions,
 } from './auth-cookie.options';
-
+import * as crypto from 'crypto';
+import { MailService } from 'src/mail/mail.service';
+import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
 @Injectable()
 export class AuthService {
   constructor(
     private authRepo: AuthRepository,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
     // private notificationRepo: NotificationsRepository,
   ) {}
-  async register(createAuthDto: RegisterUserDto, res: express.Response) {
+  async register(createAuthDto: RegisterUserDto) {
     const email = createAuthDto.email.toLowerCase();
     const user = await this.authRepo.findByEmail(email);
     if (user) {
@@ -44,22 +47,36 @@ export class AuthService {
       password: hashedPassword,
       email,
     });
-    const { access_token } = this.createToken(
+    const { token, tokenHash } = this.generateEmailVerificationToken();
+
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 15);
+
+    await this.authRepo.saveEmailVerificationToken(
       newUser.id,
-      newUser.email,
-      newUser.role,
-      newUser.provider,
+      tokenHash,
+      expiresAt,
     );
-    const { refreshToken } = this.createRefreshToken(newUser.id);
-    const hashedRT = await bcrypt.hash(refreshToken, 12);
-    await this.authRepo.updateRefreshToken(newUser.id, hashedRT);
-    this.setAuthCookies(res, access_token, refreshToken);
+
+    const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
+
+    const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
+
+    await this.mailService.sendVerificationEmail(
+      newUser.email,
+      newUser.name,
+      verificationUrl,
+    );
+
+    return { success: true, message: 'Verification email sent' };
   }
 
   async login(loginDto: LoginUserDto, res: express.Response) {
     const user = await this.authRepo.findByEmail(loginDto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+    if (!user.isVerified) {
+      throw new UnauthorizedException('Please verify your email before login');
     }
     if (!user.password) {
       throw new UnauthorizedException(
@@ -84,6 +101,40 @@ export class AuthService {
     await this.authRepo.updateRefreshToken(user.id, hashedRT);
     await this.authRepo.updateLastLogin(user.id);
     this.setAuthCookies(res, access_token, refreshToken);
+  }
+  async verifyEmail(token: string) {
+    if (!token) {
+      throw new BadRequestException('Verification token is required');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await this.authRepo.findByEmailVerificationToken(tokenHash);
+
+    if (!user) {
+      throw new BadRequestException('Invalid verification token');
+    }
+
+    if (
+      !user.emailVerificationExpires ||
+      user.emailVerificationExpires < new Date()
+    ) {
+      throw new BadRequestException('Verification token has expired');
+    }
+
+    if (user.isVerified) {
+      return {
+        success: true,
+        message: 'Email already verified',
+      };
+    }
+
+    await this.authRepo.markEmailAsVerified(user.id);
+
+    return {
+      success: true,
+      message: 'Email verified successfully',
+    };
   }
   async refresh(refreshToken: string | undefined, res: express.Response) {
     try {
@@ -158,6 +209,110 @@ export class AuthService {
     await this.authRepo.updateRefreshToken(userId, null);
     this.clearAuthCookies(res);
   }
+  async resendVerificationEmail(dto: ResendVerificationEmailDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    const user = await this.authRepo.findByEmail(email);
+
+    if (!user) {
+      return {
+        success: true,
+        message:
+          'If this email exists and is not verified, a verification email has been sent',
+      };
+    }
+    const message =
+      'If this email exists and is not verified, a verification email has been sent';
+    if (user.isVerified) {
+      return {
+        success: true,
+        message,
+      };
+    }
+
+    const { token, tokenHash } = this.generateEmailVerificationToken();
+
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 15);
+
+    await this.authRepo.saveEmailVerificationToken(
+      user.id,
+      tokenHash,
+      expiresAt,
+    );
+    const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
+
+    const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
+    await this.mailService.sendVerificationEmail(
+      user.email,
+      user.name,
+      verificationUrl,
+    );
+
+    return {
+      success: true,
+      message,
+    };
+  }
+  async forgotPassword(emailInput: string) {
+    const response = {
+      success: true,
+      message: 'If this email exists, a password reset link has been sent',
+    };
+
+    const email = emailInput.trim().toLowerCase();
+    const user = await this.authRepo.findByEmail(email);
+
+    if (
+      !user ||
+      !user.isVerified ||
+      user.provider !== AuthProvider.local ||
+      !user.password
+    ) {
+      return response;
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 15);
+
+    await this.authRepo.savePasswordResetToken(user.id, tokenHash, expiresAt);
+
+    const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
+
+    const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
+
+    await this.mailService.forgotPasswordEmail(user.email, user.name, resetUrl);
+
+    return response;
+  }
+  async resetPasswordWithToken(token: string, newPassword: string) {
+    if (!token) {
+      throw new BadRequestException('Reset token is required');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await this.authRepo.findByPasswordResetToken(tokenHash);
+
+    if (
+      !user ||
+      !user.passwordResetExpires ||
+      user.passwordResetExpires < new Date()
+    ) {
+      throw new BadRequestException('Invalid or expired password reset token');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await this.authRepo.resetPassword(user.id, hashedPassword);
+
+    return {
+      success: true,
+      message: 'Password reset successfully',
+    };
+  }
 
   private setAuthCookies(
     res: express.Response,
@@ -194,5 +349,12 @@ export class AuthService {
     const secret = this.configService.get<string>('JWT_REFRESH_SECRET');
     if (!secret) throw new Error('JWT_REFRESH_SECRET is not defined');
     return secret;
+  }
+  private generateEmailVerificationToken() {
+    const token = crypto.randomBytes(32).toString('hex');
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    return { token, tokenHash };
   }
 }
