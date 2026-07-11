@@ -6,12 +6,14 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthRepository } from './auth.repo';
 import { PrismaAuthRepository } from './auth-prisma.repo';
 import { MailModule } from 'src/mail/mail.module';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   controllers: [AuthController],
   providers: [
     AuthService,
     JwtStrategy,
+    GoogleStrategy,
     { provide: AuthRepository, useClass: PrismaAuthRepository },
   ],
   exports: [AuthService, AuthRepository],

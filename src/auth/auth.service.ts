@@ -23,6 +23,9 @@ import {
 import * as crypto from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
+import { ConflictException } from '@nestjs/common';
+import { GoogleUserProfile } from './types/google-profile.type';
+import { User } from 'src/users/entities/user.entity';
 @Injectable()
 export class AuthService {
   constructor(
@@ -313,7 +316,57 @@ export class AuthService {
       message: 'Password reset successfully',
     };
   }
+  async validateGoogleUser(profile: GoogleUserProfile) {
+    const providerUser = await this.authRepo.findByProviderAccount(
+      AuthProvider.google,
+      profile.providerId,
+    );
 
+    if (providerUser) {
+      return providerUser;
+    }
+
+    const existingUser = await this.authRepo.findByEmail(profile.email);
+
+    if (existingUser) {
+      throw new ConflictException(
+        existingUser.provider === AuthProvider.local
+          ? 'An account with this email already exists. Sign in with your password before linking Google.'
+          : `This email is already associated with ${existingUser.provider}.`,
+      );
+    }
+
+    return this.authRepo.createOAuthUser({
+      email: profile.email,
+      name: profile.name,
+      avatar: profile.avatar,
+      provider: AuthProvider.google,
+      providerId: profile.providerId,
+      isVerified: true,
+    });
+  }
+  async completeOAuthLogin(user: User, res: express.Response) {
+    const { access_token } = this.createToken(
+      user.id,
+      user.email,
+      user.role,
+      user.provider,
+    );
+
+    const { refreshToken } = this.createRefreshToken(user.id);
+
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 12);
+
+    await this.authRepo.updateRefreshToken(user.id, hashedRefreshToken);
+
+    await this.authRepo.updateLastLogin(user.id);
+
+    this.setAuthCookies(res, access_token, refreshToken);
+
+    return {
+      success: true,
+    };
+  }
   private setAuthCookies(
     res: express.Response,
     accessToken: string,

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Post,
@@ -23,10 +21,16 @@ import * as express from 'express';
 // import { generateCsrfToken } from 'csrf-csrf';
 import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GoogleAuthGuard } from './guard/google-auth.guard';
+import { User } from 'src/users/entities/user.entity';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('register')
   @ApiResponse({ status: 201, description: 'User registered successfully' })
@@ -87,14 +91,27 @@ export class AuthController {
   }
 
   @Get('/google')
-  @ApiOperation({ summary: 'Google login' })
-  async googleLogin() {
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Login with Google' })
+  googleLogin() {
+    return 'hello world';
     // This route will redirect to Google for authentication
   }
-  @Get('/google/callback')
-  @ApiOperation({ summary: 'Google login callback' })
-  async googleLoginCallback() {
-    // This route will handle the Google authentication callback
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  async googleLoginCallback(
+    @Req() req: express.Request,
+    @Res({ passthrough: true }) res: express.Response,
+  ) {
+    const user = req.user as User;
+
+    await this.authService.completeOAuthLogin(user, res);
+
+    const frontendUrl = this.configService.getOrThrow<string>(
+      'FRONTEND_OAUTH_SUCCESS_URL',
+    );
+
+    return res.redirect(frontendUrl);
   }
   @HttpCode(HttpStatus.OK)
   @Post('refresh')

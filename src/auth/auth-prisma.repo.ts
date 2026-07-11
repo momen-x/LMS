@@ -3,6 +3,8 @@ import { RegisterUserDto } from './dto/register-auth.dto';
 import { AuthRepository } from './auth.repo';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { User } from 'src/users/entities/user.entity';
+import { CreateOAuthUserData } from './dto/create-oAuth-user-date.dto';
+import { AuthProvider } from '@prisma/client';
 
 @Injectable()
 export class PrismaAuthRepository implements AuthRepository {
@@ -131,6 +133,33 @@ export class PrismaAuthRepository implements AuthRepository {
     return this.prisma.user.findUnique({
       where: {
         passwordResetToken: tokenHash,
+      },
+    });
+  }
+  async findByProviderAccount(
+    provider: AuthProvider,
+    providerId: string,
+  ): Promise<User | null> {
+    return this.prisma.user.findUnique({
+      where: {
+        provider_providerId: {
+          provider,
+          providerId,
+        },
+      },
+    });
+  }
+
+  async createOAuthUser(data: CreateOAuthUserData): Promise<User> {
+    return this.prisma.user.create({
+      data: {
+        email: data.email,
+        name: data.name,
+        provider: data.provider,
+        providerId: data.providerId,
+        avatar: data.avatar,
+        isVerified: data.isVerified,
+        password: null,
       },
     });
   }
