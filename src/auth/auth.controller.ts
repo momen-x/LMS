@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Post,
@@ -7,15 +9,17 @@ import {
   Res,
   Get,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import express from 'express';
 import { RegisterUserDto } from './dto/register-auth.dto';
 import { LoginUserDto } from './dto/login-auth.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { AuthenticatedUser } from 'src/users/decorator/auth';
-import { AuthGuard } from '@nestjs/passport';
+import { AuthenticatedUser } from 'src/users/decorator/authenticated-user.decorator';
+import { REFRESH_TOKEN_COOKIE } from './auth-cookie.options';
+import { JwtAuthGuard } from './guard/UseGuards.guard';
+import * as express from 'express';
+import { generateCsrfToken } from 'csrf-csrf';
 
 @Controller('auth')
 export class AuthController {
@@ -24,19 +28,11 @@ export class AuthController {
   @Post('register')
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiOperation({ summary: 'Register a new user' })
-  async create(
+  async register(
     @Body() dto: RegisterUserDto,
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    const result = await this.authService.register(dto);
-    if (result.access_token) {
-      res.cookie('access_token', result.access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 1000 * 60 * 60 * 24 * 15,
-      });
-    }
+    await this.authService.register(dto, res);
     return { success: true };
   }
   @HttpCode(HttpStatus.OK)
@@ -47,30 +43,18 @@ export class AuthController {
     @Body() dto: LoginUserDto,
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    const result = await this.authService.login(dto);
-    if (result.access_token) {
-      res.cookie('access_token', result.access_token, {
-        httpOnly: true,
-        maxAge: 1000 * 60 * 15,
-      });
-
-      res.cookie('refresh_token', result.refreshToken, {
-        httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-      });
-    }
+    await this.authService.login(dto, res);
     return { success: true };
   }
   @HttpCode(HttpStatus.OK)
   @Post('logout')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'logout user' })
   async logout(
-    @AuthenticatedUser() user: { id: string },
+    @AuthenticatedUser() user: { sub: string },
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    await this.authService.logout(user.id); // clear hashedRefreshToken in DB
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    await this.authService.logout(user.sub, res);
     return { success: true };
   }
   @Get('/google')
@@ -83,11 +67,22 @@ export class AuthController {
   async googleLoginCallback() {
     // This route will handle the Google authentication callback
   }
+  @HttpCode(HttpStatus.OK)
   @Post('refresh')
   async refresh(
-    @Body() dto: RefreshTokenDto,
+    @Req() req: express.Request,
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    return this.authService.refresh(dto, res);
+    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE] as
+      string | undefined;
+    return this.authService.refresh(refreshToken, res);
+  }
+  @Get('csrf-token')
+  getCsrfToken(
+    @Req() req: express.Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const token = generateCsrfToken(req, res);
+    return { csrfToken: token };
   }
 }

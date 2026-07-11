@@ -5,13 +5,23 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
-export class PrismaUserRepository implements AuthRepository {
+export class PrismaAuthRepository implements AuthRepository {
   constructor(private prisma: PrismaService) {}
 
   async findByEmail(email: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({
       where: {
         email,
+      },
+    });
+
+    return user as User | null;
+  }
+
+  async findById(id: string): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id,
       },
     });
 

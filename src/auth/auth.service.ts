@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Injectable,
@@ -11,21 +7,31 @@ import { RegisterUserDto } from './dto/register-auth.dto';
 import { LoginUserDto } from './dto/login-auth.dto';
 import { AuthRepository } from './auth.repo';
 import * as bcrypt from 'bcryptjs';
-import { JWTPayloadType } from 'src/utils/type';
+import { JWTPayloadType, RefreshTokenPayloadType } from 'src/utils/type';
 import { AuthProvider, UserRole } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import * as express from 'express';
+import { ConfigService } from '@nestjs/config';
+import {
+  ACCESS_TOKEN_COOKIE,
+  ACCESS_TOKEN_MAX_AGE,
+  REFRESH_TOKEN_COOKIE,
+  REFRESH_TOKEN_MAX_AGE,
+  getAuthCookieOptions,
+  getClearAuthCookieOptions,
+} from './auth-cookie.options';
 
 @Injectable()
 export class AuthService {
   constructor(
     private authRepo: AuthRepository,
     private jwtService: JwtService,
+    private configService: ConfigService,
     // private notificationRepo: NotificationsRepository,
   ) {}
-  async register(createAuthDto: RegisterUserDto) {
-    const user = await this.authRepo.findByEmail(createAuthDto.email);
+  async register(createAuthDto: RegisterUserDto, res: express.Response) {
+    const email = createAuthDto.email.toLowerCase();
+    const user = await this.authRepo.findByEmail(email);
     if (user) {
       throw new BadRequestException('User with this email already exists');
     }
@@ -36,7 +42,7 @@ export class AuthService {
     const newUser = await this.authRepo.create({
       ...createAuthDto,
       password: hashedPassword,
-      email: createAuthDto.email.toLowerCase(),
+      email,
     });
     const { access_token } = this.createToken(
       newUser.id,
@@ -44,24 +50,13 @@ export class AuthService {
       newUser.role,
       newUser.provider,
     );
-    return {
-      access_token,
-      user: {
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        provider: newUser.provider,
-        avatar: newUser.avatar,
-        isVerified: newUser.isVerified,
-        lastLogin: newUser.lastLogin,
-        createdAt: newUser.createdAt,
-        updatedAt: newUser.updatedAt,
-        id: newUser.id,
-      },
-    };
+    const { refreshToken } = this.createRefreshToken(newUser.id);
+    const hashedRT = await bcrypt.hash(refreshToken, 12);
+    await this.authRepo.updateRefreshToken(newUser.id, hashedRT);
+    this.setAuthCookies(res, access_token, refreshToken);
   }
 
-  async login(loginDto: LoginUserDto) {
+  async login(loginDto: LoginUserDto, res: express.Response) {
     const user = await this.authRepo.findByEmail(loginDto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
@@ -84,33 +79,34 @@ export class AuthService {
       user.role,
       user.provider,
     );
-    const { refreshToken } = this.createRefreshToken(
-      user.id,
-      user.email,
-      user.role,
-      user.provider,
-    );
+    const { refreshToken } = this.createRefreshToken(user.id);
     const hashedRT = await bcrypt.hash(refreshToken, 12);
     await this.authRepo.updateRefreshToken(user.id, hashedRT);
     await this.authRepo.updateLastLogin(user.id);
-    return { access_token, refreshToken };
+    this.setAuthCookies(res, access_token, refreshToken);
   }
-  async refresh(dto: RefreshTokenDto, res: express.Response) {
+  async refresh(refreshToken: string | undefined, res: express.Response) {
     try {
-      if (!dto.hashedRefreshToken) {
+      if (!refreshToken) {
         throw new UnauthorizedException('Refresh token is missing');
       }
-      const decoded = this.jwtService.verify(dto.hashedRefreshToken);
-      const user = await this.authRepo.findByEmail(decoded.email);
+      const decoded = this.jwtService.verify<RefreshTokenPayloadType>(
+        refreshToken,
+        {
+          secret: this.getRefreshTokenSecret(),
+        },
+      );
+      const user = await this.authRepo.findById(decoded.sub);
       if (!user || !user.hashedRefreshToken) {
         throw new UnauthorizedException('Invalid refresh token');
       }
       const isMatch = await bcrypt.compare(
-        dto.hashedRefreshToken,
+        refreshToken,
         user.hashedRefreshToken,
       );
 
       if (!isMatch) {
+        await this.authRepo.updateRefreshToken(user.id, null);
         throw new UnauthorizedException('Invalid refresh token');
       }
       const { access_token } = this.createToken(
@@ -121,22 +117,11 @@ export class AuthService {
       );
       const { refreshToken: newRefreshToken } = this.createRefreshToken(
         user.id,
-        user.email,
-        user.role,
-        user.provider,
       );
       const hashedRT = await bcrypt.hash(newRefreshToken, 12);
       await this.authRepo.updateRefreshToken(user.id, hashedRT);
-      res.cookie('access_token', access_token, {
-        httpOnly: true,
-        maxAge: 1000 * 60 * 15,
-      });
-
-      res.cookie('refresh_token', newRefreshToken, {
-        httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-      });
-      return { access_token, refreshToken: newRefreshToken };
+      this.setAuthCookies(res, access_token, newRefreshToken);
+      return { success: true };
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -153,25 +138,61 @@ export class AuthService {
       role: role,
       provider: provider, // Assuming local for standard login; adjust as needed for social logins
     };
-    const access_token = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const access_token = this.jwtService.sign(payload, {
+      secret: this.getAccessTokenSecret(),
+      expiresIn: '15m',
+    });
     return { access_token };
   }
-  private createRefreshToken(
-    id: string,
-    email: string,
-    role: UserRole,
-    provider: AuthProvider,
-  ) {
-    const payload: JWTPayloadType = {
+  private createRefreshToken(id: string) {
+    const payload: RefreshTokenPayloadType = {
       sub: id,
-      email: email,
-      role: role,
-      provider: provider, // Assuming local for standard login; adjust as needed for social logins
     };
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.getRefreshTokenSecret(),
+      expiresIn: '7d',
+    });
     return { refreshToken };
   }
-  async logout(userId: string) {
+  async logout(userId: string, res: express.Response) {
     await this.authRepo.updateRefreshToken(userId, null);
+    this.clearAuthCookies(res);
+  }
+
+  private setAuthCookies(
+    res: express.Response,
+    accessToken: string,
+    refreshToken: string,
+  ) {
+    res.cookie(
+      ACCESS_TOKEN_COOKIE,
+      accessToken,
+      getAuthCookieOptions(this.configService, ACCESS_TOKEN_MAX_AGE),
+    );
+
+    res.cookie(
+      REFRESH_TOKEN_COOKIE,
+      refreshToken,
+      getAuthCookieOptions(this.configService, REFRESH_TOKEN_MAX_AGE),
+    );
+  }
+
+  private clearAuthCookies(res: express.Response) {
+    const options = getClearAuthCookieOptions(this.configService);
+
+    res.clearCookie(ACCESS_TOKEN_COOKIE, options);
+    res.clearCookie(REFRESH_TOKEN_COOKIE, options);
+  }
+
+  private getAccessTokenSecret() {
+    const secret = this.configService.get<string>('JWT_ACCESS_SECRET');
+    if (!secret) throw new Error('JWT_ACCESS_SECRET is not defined');
+    return secret;
+  }
+
+  private getRefreshTokenSecret() {
+    const secret = this.configService.get<string>('JWT_REFRESH_SECRET');
+    if (!secret) throw new Error('JWT_REFRESH_SECRET is not defined');
+    return secret;
   }
 }

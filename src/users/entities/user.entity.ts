@@ -10,7 +10,7 @@ export class User {
     public provider: AuthProvider,
     public avatar: string | null,
     public isVerified: boolean,
-    public lastLogin: Date,
+    public lastLogin: Date | null,
     public createdAt: Date,
     public updatedAt: Date,
     public password: string | null,

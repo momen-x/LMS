@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -9,6 +8,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import * as express from 'express';
 import { join } from 'path';
 import helmet from 'helmet';
+import { doubleCsrf } from 'csrf-csrf';
 // import './config/cloudinary.config';
 
 async function bootstrap() {
@@ -33,6 +33,19 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  const { doubleCsrfProtection } = doubleCsrf({
+    getSecret: () => process.env.CSRF_SECRET!,
+    cookieName: 'x-csrf-token',
+    cookieOptions: {
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    },
+    size: 64,
+    ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
+  });
+
+  app.use(doubleCsrfProtection);
   const swagger = new DocumentBuilder()
     .setTitle('Learning Management System LMS API')
     .setDescription(
