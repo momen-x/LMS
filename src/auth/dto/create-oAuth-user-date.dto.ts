@@ -19,7 +19,7 @@ export class CreateOAuthUserData {
   @MinLength(8)
   @ApiProperty()
   name!: string;
-  provider!: 'google';
+  provider!: 'google' | 'github';
   @ApiProperty()
   @IsString()
   @IsNotEmpty()

@@ -24,6 +24,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { GoogleAuthGuard } from './guard/google-auth.guard';
 import { User } from 'src/users/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
+import { GithubAuthGuard } from './guard/github-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -113,6 +114,23 @@ export class AuthController {
 
     return res.redirect(frontendUrl);
   }
+  @Get('github')
+  @UseGuards(GithubAuthGuard)
+  @ApiOperation({ summary: 'Login with Github' })
+  githubLogin() {
+    return 'hello world';
+    // This route will redirect to Github for authentication
+  }
+  @Get('github/callback')
+  @UseGuards(GithubAuthGuard)
+  async githubLoginCallback(
+    @Req() req: express.Request,
+    @Res({ passthrough: true }) res: express.Response,
+  ) {
+    const user = req.user as User;
+    await this.authService.completeOAuthLogin(user, res);
+  }
+
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   async refresh(

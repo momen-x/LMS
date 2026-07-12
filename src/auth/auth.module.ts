@@ -7,6 +7,7 @@ import { AuthRepository } from './auth.repo';
 import { PrismaAuthRepository } from './auth-prisma.repo';
 import { MailModule } from 'src/mail/mail.module';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { GithubStrategy } from './strategies/github.strategy';
 
 @Module({
   controllers: [AuthController],
@@ -14,6 +15,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
     AuthService,
     JwtStrategy,
     GoogleStrategy,
+    GithubStrategy,
     { provide: AuthRepository, useClass: PrismaAuthRepository },
   ],
   exports: [AuthService, AuthRepository],

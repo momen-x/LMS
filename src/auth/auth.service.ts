@@ -26,6 +26,7 @@ import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto'
 import { ConflictException } from '@nestjs/common';
 import { GoogleUserProfile } from './types/google-profile.type';
 import { User } from 'src/users/entities/user.entity';
+import { GithubUserProfile } from './types/github-profile.type';
 @Injectable()
 export class AuthService {
   constructor(
@@ -341,6 +342,35 @@ export class AuthService {
       name: profile.name,
       avatar: profile.avatar,
       provider: AuthProvider.google,
+      providerId: profile.providerId,
+      isVerified: true,
+    });
+  }
+  async validateGithubUser(profile: GithubUserProfile) {
+    const providerUser = await this.authRepo.findByProviderAccount(
+      AuthProvider.github,
+      profile.providerId,
+    );
+
+    if (providerUser) {
+      return providerUser;
+    }
+
+    const existingUser = await this.authRepo.findByEmail(profile.email);
+
+    if (existingUser) {
+      throw new ConflictException(
+        existingUser.provider === AuthProvider.local
+          ? 'An account with this email already exists. Sign in with your password before linking Github.'
+          : `This email is already associated with ${existingUser.provider}.`,
+      );
+    }
+
+    return this.authRepo.createOAuthUser({
+      email: profile.email,
+      name: profile.name,
+      avatar: profile.avatar,
+      provider: AuthProvider.github,
       providerId: profile.providerId,
       isVerified: true,
     });
