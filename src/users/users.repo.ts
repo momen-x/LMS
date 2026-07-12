@@ -9,4 +9,10 @@ export abstract class UserRepository {
   abstract findById(id: string): Promise<User | null>;
   abstract deleteUser(id: string): Promise<User>;
   abstract updateUserRole(id: string, role: UserRole): Promise<User>;
+  abstract uploadUserAvatar(
+    id: string,
+    avatar: string,
+    avatarPublicId: string,
+  ): Promise<User>;
+  abstract deleteUserAvatar(id: string): Promise<User>;
 }

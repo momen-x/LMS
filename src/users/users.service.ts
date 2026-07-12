@@ -12,6 +12,7 @@ import {
 } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { UserRepository } from './users.repo';
+import { CloudinaryService } from 'src/cloudinary/config/cloudinary.service';
 
 type SafeUser = {
   id: string;
@@ -28,7 +29,10 @@ type SafeUser = {
 
 @Injectable()
 export class UsersService {
-  constructor(private userRepo: UserRepository) {}
+  constructor(
+    private userRepo: UserRepository,
+    private cloudinaryService: CloudinaryService,
+  ) {}
 
   async findAll(): Promise<SafeUser[]> {
     const users = await this.userRepo.getAllUsers();
@@ -89,7 +93,35 @@ export class UsersService {
     await this.userRepo.deleteUser(id);
     return { success: true };
   }
+  async uploadUserAvatar(id: string, file: Express.Multer.File) {
+    const user = await this.findUserOrThrow(id);
+    if (!file) throw new BadRequestException('image is required');
+    const image = await this.cloudinaryService.uploadFile(
+      file,
+      'users/avatars',
+    );
+    const userImageUrl = image.url;
+    const updateUserImage = await this.userRepo.uploadUserAvatar(
+      user.id,
+      userImageUrl,
+      image.publicId,
+    );
+    return this.toSafeUser(updateUserImage);
+  }
+  async deleteUserAvatar(id: string) {
+    const user = await this.findUserOrThrow(id);
+    if (!user.avatar) {
+      throw new NotFoundException('avatar not found');
+    }
+    const avatarPublicId = user.avatarPublicId;
 
+    await this.cloudinaryService.deleteFile(user.avatar);
+    if (avatarPublicId) {
+      await this.cloudinaryService.deleteFile(avatarPublicId);
+    }
+    const deleteUserImage = await this.userRepo.deleteUserAvatar(user.id);
+    return this.toSafeUser(deleteUserImage);
+  }
   private async findUserOrThrow(id: string): Promise<User> {
     const user = await this.userRepo.findById(id);
     if (!user) {

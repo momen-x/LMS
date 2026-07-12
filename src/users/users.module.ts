@@ -5,12 +5,14 @@ import { AuthModule } from 'src/auth/auth.module';
 import { UserRepository } from './users.repo';
 import { PrismaUserRepository } from './users-prisma.repo';
 import { RolesGuard } from '../auth/guard/user-guard.guard';
+import { CloudinaryService } from 'src/cloudinary/config/cloudinary.service';
 
 @Module({
   controllers: [UsersController],
   providers: [
     UsersService,
     RolesGuard,
+    CloudinaryService,
     { provide: UserRepository, useClass: PrismaUserRepository },
   ],
   imports: [AuthModule],

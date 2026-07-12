@@ -60,6 +60,7 @@ model User {
   provider                 AuthProvider @default(local)
   providerId               String?
   avatar                   String?
+  avatarPublicId String?
   isVerified               Boolean      @default(false)
   lastLogin                DateTime?
   hashedRefreshToken       String?

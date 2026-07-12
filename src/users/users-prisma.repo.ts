@@ -51,4 +51,18 @@ export class PrismaUserRepository implements UserRepository {
     });
     return updateUserRole;
   }
+  async uploadUserAvatar(id: string, avatar: string, avatarPublicId: string) {
+    const updateUserImage = await this.prisma.user.update({
+      where: { id },
+      data: { avatar, avatarPublicId },
+    });
+    return updateUserImage;
+  }
+  async deleteUserAvatar(id: string) {
+    const updateUserImage = await this.prisma.user.update({
+      where: { id },
+      data: { avatar: null, avatarPublicId: null },
+    });
+    return updateUserImage;
+  }
 }

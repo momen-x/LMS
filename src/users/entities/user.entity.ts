@@ -9,6 +9,7 @@ export class User {
     public role: UserRole,
     public provider: AuthProvider,
     public avatar: string | null,
+    public avatarPublicId: string | null,
     public isVerified: boolean,
     public lastLogin: Date | null,
     public createdAt: Date,
