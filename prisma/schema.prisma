@@ -122,6 +122,9 @@ model Course {
   language      String       @default("en")
   averageRating Decimal      @default(0) @db.Decimal(3, 2)
   totalStudents Int          @default(0)
+  duration      Int          @default(0)
+  lessonsCount  Int          @default(0)
+  publishedAt   DateTime?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 

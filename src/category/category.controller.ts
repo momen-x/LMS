@@ -37,8 +37,6 @@ export class CategoryController {
   @Get()
   @ApiResponse({ status: 200, description: 'get all categories' })
   @ApiOperation({ summary: 'Get all Categories' })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.admin)
   findAll() {
     return this.categoryService.findAll();
   }
@@ -46,8 +44,6 @@ export class CategoryController {
   @Get(':id')
   @ApiResponse({ status: 200, description: 'get category by id' })
   @ApiOperation({ summary: 'get single category' })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.admin)
   findOne(@Param('id') id: string) {
     return this.categoryService.findOne(id);
   }
@@ -68,7 +64,7 @@ export class CategoryController {
   @Delete(':id')
   @ApiResponse({ status: 200, description: 'Delete category' })
   @ApiOperation({ summary: 'Delete category' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.admin)
   remove(@Param('id') id: string) {
     return this.categoryService.remove(id);

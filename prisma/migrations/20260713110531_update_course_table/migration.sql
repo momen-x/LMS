@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Course" ADD COLUMN     "duration" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "lessonsCount" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "publishedAt" TIMESTAMP(3);
