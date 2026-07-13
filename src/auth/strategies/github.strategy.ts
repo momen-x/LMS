@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { AuthProvider } from '@prisma/client';
 import { Profile, Strategy } from 'passport-github2';
 import { AuthService } from '../auth.service';
-import { GithubUserProfile } from '../types/github-profile.type';
+import { ProviderUserProfile } from '../types/provider-profile.type';
 
 @Injectable()
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
@@ -37,7 +36,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
         );
       }
 
-      const githubProfile: GithubUserProfile = {
+      const githubProfile: ProviderUserProfile = {
         providerId: profile.id,
         email: email.trim().toLowerCase(),
         name: profile.displayName || email.split('@')[0],

@@ -14,9 +14,6 @@ import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-auth.dto';
 import { LoginUserDto } from './dto/login-auth.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { AuthenticatedUser } from 'src/users/decorator/authenticated-user.decorator';
-import { REFRESH_TOKEN_COOKIE } from './auth-cookie.options';
-import { JwtAuthGuard } from './guard/UseGuards.guard';
 import * as express from 'express';
 // import { generateCsrfToken } from 'csrf-csrf';
 import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
@@ -46,8 +43,12 @@ export class AuthController {
   async login(
     @Body() dto: LoginUserDto,
     @Res({ passthrough: true }) res: express.Response,
+    @Req() req: express.Request,
   ) {
-    await this.authService.login(dto, res);
+    await this.authService.login(dto, res, {
+      userAgent: req.headers['user-agent'] ?? 'unknown',
+      ipAddress: req.ip ?? 'unknown',
+    });
     return { success: true };
   }
   @Post('resend-verification')
@@ -77,13 +78,13 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'logout user' })
   async logout(
-    @AuthenticatedUser() user: { sub: string },
+    @Req() req: express.Request,
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    await this.authService.logout(user.sub, res);
+    const refreshToken = req.cookies?.['refresh_token'] as string | undefined;
+    await this.authService.logout(refreshToken, res);
     return { success: true };
   }
   @Get('verify-email')
@@ -96,7 +97,6 @@ export class AuthController {
   @ApiOperation({ summary: 'Login with Google' })
   googleLogin() {
     return 'hello world';
-    // This route will redirect to Google for authentication
   }
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
@@ -105,13 +105,14 @@ export class AuthController {
     @Res({ passthrough: true }) res: express.Response,
   ) {
     const user = req.user as User;
-
-    await this.authService.completeOAuthLogin(user, res);
+    await this.authService.completeOAuthLogin(user, res, {
+      userAgent: req.headers['user-agent'] ?? 'unknown',
+      ipAddress: req.ip ?? 'unknown',
+    });
 
     const frontendUrl = this.configService.getOrThrow<string>(
       'FRONTEND_OAUTH_SUCCESS_URL',
     );
-
     return res.redirect(frontendUrl);
   }
   @Get('github')
@@ -128,17 +129,24 @@ export class AuthController {
     @Res({ passthrough: true }) res: express.Response,
   ) {
     const user = req.user as User;
-    await this.authService.completeOAuthLogin(user, res);
+    await this.authService.completeOAuthLogin(user, res, {
+      userAgent: req.headers['user-agent'] ?? 'unknown',
+      ipAddress: req.ip ?? 'unknown',
+    });
+
+    const frontendUrl = this.configService.getOrThrow<string>(
+      'FRONTEND_OAUTH_SUCCESS_URL',
+    );
+    return res.redirect(frontendUrl);
   }
 
-  @HttpCode(HttpStatus.OK)
   @Post('refresh')
+  @HttpCode(HttpStatus.OK)
   async refresh(
     @Req() req: express.Request,
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    const refreshToken = req.cookies[REFRESH_TOKEN_COOKIE] as
-      string | undefined;
+    const refreshToken = req.cookies?.['refresh_token'] as string | undefined;
     return this.authService.refresh(refreshToken, res);
   }
   // @Get('csrf-token')

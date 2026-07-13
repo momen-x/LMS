@@ -60,10 +60,9 @@ model User {
   provider                 AuthProvider @default(local)
   providerId               String?
   avatar                   String?
-  avatarPublicId String?
+  avatarPublicId           String?
   isVerified               Boolean      @default(false)
   lastLogin                DateTime?
-  hashedRefreshToken       String?
   emailVerificationToken   String?      @unique
   emailVerificationExpires DateTime?
   passwordResetToken       String?      @unique
@@ -71,16 +70,33 @@ model User {
   createdAt                DateTime     @default(now())
   updatedAt                DateTime     @updatedAt
 
-  courses        Course[]        @relation("InstructorCourses")
-  enrollments    Enrollment[]
-  certificates   Certificate[]
-  reviews        Review[]
-  studentAnswers StudentAnswer[]
-  notifications  Notification[]
-  payments       Payment[]
+  courses              Course[]              @relation("InstructorCourses")
+  enrollments          Enrollment[]
+  certificates         Certificate[]
+  reviews              Review[]
+  studentAnswers       StudentAnswer[]
+  notifications        Notification[]
+  payments             Payment[]
+  refreshTokenSessions RefreshTokenSession[]
 
   @@unique([provider, providerId])
   @@index([email])
+}
+
+model RefreshTokenSession {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String?
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Category {

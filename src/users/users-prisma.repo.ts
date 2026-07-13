@@ -21,14 +21,6 @@ export class PrismaUserRepository implements UserRepository {
     });
     return updateUserPass;
   }
-  async clearRefreshToken(id: string): Promise<User> {
-    const updatedUser = await this.prisma.user.update({
-      where: { id },
-      data: { hashedRefreshToken: null },
-    });
-    return updatedUser;
-  }
-
   getAllUsers(): Promise<User[]> {
     return this.prisma.user.findMany();
   }

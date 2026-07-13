@@ -15,7 +15,6 @@ export class User {
     public createdAt: Date,
     public updatedAt: Date,
     public password: string | null,
-    public hashedRefreshToken: string | null,
     public emailVerificationToken: string | null,
     public emailVerificationExpires: Date | null,
     public passwordResetToken: string | null,

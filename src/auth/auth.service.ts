@@ -7,7 +7,8 @@ import { RegisterUserDto } from './dto/register-auth.dto';
 import { LoginUserDto } from './dto/login-auth.dto';
 import { AuthRepository } from './auth.repo';
 import * as bcrypt from 'bcryptjs';
-import { JWTPayloadType, RefreshTokenPayloadType } from 'src/utils/type';
+import { JWTPayloadType } from 'src/utils/type';
+import { RefreshTokenPayloadType } from './types/refresh-token.type';
 import { AuthProvider, UserRole } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as express from 'express';
@@ -24,9 +25,9 @@ import * as crypto from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
 import { ConflictException } from '@nestjs/common';
-import { GoogleUserProfile } from './types/google-profile.type';
+// import { GoogleUserProfile } from './types/google-profile.type';
 import { User } from 'src/users/entities/user.entity';
-import { GithubUserProfile } from './types/github-profile.type';
+import { ProviderUserProfile } from './types/provider-profile.type';
 @Injectable()
 export class AuthService {
   constructor(
@@ -39,6 +40,11 @@ export class AuthService {
   async register(createAuthDto: RegisterUserDto) {
     const email = createAuthDto.email.toLowerCase();
     const user = await this.authRepo.findByEmail(email);
+    if (user && (!user.isVerified || !user.emailVerificationExpires)) {
+      throw new BadRequestException(
+        'Verification token has expired, please resend verification email',
+      );
+    }
     if (user) {
       throw new BadRequestException('User with this email already exists');
     }
@@ -74,7 +80,11 @@ export class AuthService {
     return { success: true, message: 'Verification email sent' };
   }
 
-  async login(loginDto: LoginUserDto, res: express.Response) {
+  async login(
+    loginDto: LoginUserDto,
+    res: express.Response,
+    { userAgent, ipAddress }: { userAgent: string; ipAddress: string },
+  ) {
     const user = await this.authRepo.findByEmail(loginDto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
@@ -94,17 +104,15 @@ export class AuthService {
     if (!isMatch) {
       throw new UnauthorizedException('Invalid email or password');
     }
-    const { access_token } = this.createToken(
-      user.id,
-      user.email,
-      user.role,
-      user.provider,
-    );
-    const { refreshToken } = this.createRefreshToken(user.id);
-    const hashedRT = await bcrypt.hash(refreshToken, 12);
-    await this.authRepo.updateRefreshToken(user.id, hashedRT);
+    const tokens = await this.createAuthenticatedSession(user, {
+      userAgent,
+      ipAddress,
+    });
+
     await this.authRepo.updateLastLogin(user.id);
-    this.setAuthCookies(res, access_token, refreshToken);
+
+    this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
+    return { success: true };
   }
   async verifyEmail(token: string) {
     if (!token) {
@@ -140,46 +148,62 @@ export class AuthService {
       message: 'Email verified successfully',
     };
   }
-  async refresh(refreshToken: string | undefined, res: express.Response) {
-    try {
-      if (!refreshToken) {
-        throw new UnauthorizedException('Refresh token is missing');
-      }
-      const decoded = this.jwtService.verify<RefreshTokenPayloadType>(
-        refreshToken,
-        {
-          secret: this.getRefreshTokenSecret(),
-        },
-      );
-      const user = await this.authRepo.findById(decoded.sub);
-      if (!user || !user.hashedRefreshToken) {
-        throw new UnauthorizedException('Invalid refresh token');
-      }
-      const isMatch = await bcrypt.compare(
-        refreshToken,
-        user.hashedRefreshToken,
-      );
-
-      if (!isMatch) {
-        await this.authRepo.updateRefreshToken(user.id, null);
-        throw new UnauthorizedException('Invalid refresh token');
-      }
-      const { access_token } = this.createToken(
-        user.id,
-        user.email,
-        user.role,
-        user.provider,
-      );
-      const { refreshToken: newRefreshToken } = this.createRefreshToken(
-        user.id,
-      );
-      const hashedRT = await bcrypt.hash(newRefreshToken, 12);
-      await this.authRepo.updateRefreshToken(user.id, hashedRT);
-      this.setAuthCookies(res, access_token, newRefreshToken);
-      return { success: true };
-    } catch {
-      throw new UnauthorizedException('Invalid refresh token');
+  async refresh(
+    refreshToken: string | undefined,
+    res: express.Response,
+  ): Promise<{ success: boolean }> {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is missing');
     }
+
+    let decoded: RefreshTokenPayloadType;
+    try {
+      decoded = this.jwtService.verify<RefreshTokenPayloadType>(refreshToken, {
+        secret: this.getRefreshTokenSecret(),
+      });
+    } catch {
+      throw new UnauthorizedException('Refresh token is expired or invalid');
+    }
+
+    const session = await this.authRepo.findRefreshTokenSessionById(
+      decoded.sessionId,
+    );
+    if (!session || session.userId !== decoded.sub) {
+      throw new UnauthorizedException('Session not found');
+    }
+    if (session.revokedAt) {
+      throw new UnauthorizedException('Session has been revoked');
+    }
+    if (session.expiresAt < new Date()) {
+      throw new UnauthorizedException('Session has expired');
+    }
+    if (!session.tokenHash) {
+      throw new UnauthorizedException('Session is invalid');
+    }
+    const isMatch = await bcrypt.compare(refreshToken, session.tokenHash);
+    if (!isMatch) {
+      await this.authRepo.revokeRefreshTokenSession(session.id);
+      throw new UnauthorizedException('Refresh token is invalid');
+    }
+
+    const user = await this.authRepo.findById(decoded.sub);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const { access_token } = this.createToken(
+      user.id,
+      user.email,
+      user.role,
+      user.provider,
+    );
+    const newRefreshToken = this.createRefreshToken(user.id, session.id);
+    const hashedRT = await bcrypt.hash(newRefreshToken, 12);
+    await this.authRepo.updateRefreshTokenSessionHash(session.id, hashedRT);
+
+    this.setAuthCookies(res, access_token, newRefreshToken);
+
+    return { success: true };
   }
   private createToken(
     id: string,
@@ -199,34 +223,66 @@ export class AuthService {
     });
     return { access_token };
   }
-  private createRefreshToken(id: string) {
+  private createRefreshToken(userId: string, sessionId: string): string {
     const payload: RefreshTokenPayloadType = {
-      sub: id,
+      sub: userId,
+      sessionId,
     };
-    const refreshToken = this.jwtService.sign(payload, {
+    return this.jwtService.sign(payload, {
       secret: this.getRefreshTokenSecret(),
       expiresIn: '7d',
     });
-    return { refreshToken };
   }
-  async logout(userId: string, res: express.Response) {
-    await this.authRepo.updateRefreshToken(userId, null);
-    this.clearAuthCookies(res);
+  private async createAuthenticatedSession(
+    user: User,
+    metadata: { userAgent: string; ipAddress: string },
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const session = await this.authRepo.createRefreshTokenSession(user.id, {
+      ...metadata,
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_MAX_AGE),
+    });
+    const { access_token: accessToken } = this.createToken(
+      user.id,
+      user.email,
+      user.role,
+      user.provider,
+    );
+    const refreshToken = this.createRefreshToken(user.id, session.id);
+    const tokenHash = await bcrypt.hash(refreshToken, 12);
+    await this.authRepo.updateRefreshTokenSessionHash(session.id, tokenHash);
+    return { accessToken, refreshToken };
+  }
+  async logout(
+    refreshToken: string | undefined,
+    res: express.Response,
+  ): Promise<void> {
+    try {
+      if (refreshToken) {
+        const payload = this.jwtService.verify<RefreshTokenPayloadType>(
+          refreshToken,
+          { secret: this.getRefreshTokenSecret() },
+        );
+        await this.authRepo.revokeRefreshTokenSession(payload.sessionId);
+      }
+    } catch {
+      // Logout is idempotent and does not expose internal token errors.
+    } finally {
+      this.clearAuthCookies(res);
+    }
   }
   async resendVerificationEmail(dto: ResendVerificationEmailDto) {
     const email = dto.email.trim().toLowerCase();
 
     const user = await this.authRepo.findByEmail(email);
+    const message =
+      'If this email exists and is not verified, a verification email has been sent';
 
     if (!user) {
       return {
         success: true,
-        message:
-          'If this email exists and is not verified, a verification email has been sent',
+        message,
       };
     }
-    const message =
-      'If this email exists and is not verified, a verification email has been sent';
     if (user.isVerified) {
       return {
         success: true,
@@ -311,13 +367,14 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     await this.authRepo.resetPassword(user.id, hashedPassword);
+    await this.authRepo.revokeAllUserSessions(user.id);
 
     return {
       success: true,
       message: 'Password reset successfully',
     };
   }
-  async validateGoogleUser(profile: GoogleUserProfile) {
+  async validateGoogleUser(profile: ProviderUserProfile) {
     const providerUser = await this.authRepo.findByProviderAccount(
       AuthProvider.google,
       profile.providerId,
@@ -346,7 +403,7 @@ export class AuthService {
       isVerified: true,
     });
   }
-  async validateGithubUser(profile: GithubUserProfile) {
+  async validateGithubUser(profile: ProviderUserProfile) {
     const providerUser = await this.authRepo.findByProviderAccount(
       AuthProvider.github,
       profile.providerId,
@@ -375,27 +432,18 @@ export class AuthService {
       isVerified: true,
     });
   }
-  async completeOAuthLogin(user: User, res: express.Response) {
-    const { access_token } = this.createToken(
-      user.id,
-      user.email,
-      user.role,
-      user.provider,
-    );
-
-    const { refreshToken } = this.createRefreshToken(user.id);
-
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 12);
-
-    await this.authRepo.updateRefreshToken(user.id, hashedRefreshToken);
+  async completeOAuthLogin(
+    user: User,
+    res: express.Response,
+    { userAgent, ipAddress }: { userAgent: string; ipAddress: string },
+  ): Promise<void> {
+    const tokens = await this.createAuthenticatedSession(user, {
+      userAgent,
+      ipAddress,
+    });
 
     await this.authRepo.updateLastLogin(user.id);
-
-    this.setAuthCookies(res, access_token, refreshToken);
-
-    return {
-      success: true,
-    };
+    this.setAuthCookies(res, tokens.accessToken, tokens.refreshToken);
   }
   private setAuthCookies(
     res: express.Response,

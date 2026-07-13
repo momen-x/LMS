@@ -1,10 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable } from '@nestjs/common';
 import { RegisterUserDto } from './dto/register-auth.dto';
 import { AuthRepository } from './auth.repo';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { User } from 'src/users/entities/user.entity';
 import { CreateOAuthUserData } from './dto/create-oAuth-user-date.dto';
-import { AuthProvider } from '@prisma/client';
+import { AuthProvider, RefreshTokenSession } from '@prisma/client';
+import { CreateRefreshTokenSessionData } from './types/refresh-token.type';
 
 @Injectable()
 export class PrismaAuthRepository implements AuthRepository {
@@ -36,20 +40,53 @@ export class PrismaAuthRepository implements AuthRepository {
     });
     return newUser;
   }
+  async createRefreshTokenSession(
+    userId: string,
+    data: CreateRefreshTokenSessionData,
+  ): Promise<RefreshTokenSession> {
+    const refreshTokenSession = await this.prisma.refreshTokenSession.create({
+      data: {
+        ...data,
+        userId,
+      },
+    });
+    return refreshTokenSession;
+  }
+  async updateRefreshTokenSessionHash(
+    sessionId: string,
+    tokenHash: string,
+  ): Promise<void> {
+    await this.prisma.refreshTokenSession.update({
+      where: { id: sessionId },
+      data: { tokenHash },
+    });
+  }
+
+  async findRefreshTokenSessionById(
+    sessionId: string,
+  ): Promise<RefreshTokenSession | null> {
+    return this.prisma.refreshTokenSession.findUnique({
+      where: { id: sessionId },
+    });
+  }
+
+  async revokeRefreshTokenSession(sessionId: string): Promise<void> {
+    await this.prisma.refreshTokenSession.update({
+      where: { id: sessionId },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  async revokeAllUserSessions(userId: string): Promise<void> {
+    await this.prisma.refreshTokenSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
   async updateLastLogin(id: string): Promise<User> {
     const updatedUser = await this.prisma.user.update({
       where: { id },
       data: { lastLogin: new Date() },
-    });
-    return updatedUser;
-  }
-  async updateRefreshToken(
-    id: string,
-    refreshToken: string | null,
-  ): Promise<User> {
-    const updatedUser = await this.prisma.user.update({
-      where: { id },
-      data: { hashedRefreshToken: refreshToken },
     });
     return updatedUser;
   }
@@ -125,7 +162,6 @@ export class PrismaAuthRepository implements AuthRepository {
         password,
         passwordResetToken: null,
         passwordResetExpires: null,
-        hashedRefreshToken: null,
       },
     });
   }

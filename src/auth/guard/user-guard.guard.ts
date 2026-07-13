@@ -9,7 +9,7 @@ import { Request } from 'express';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '@prisma/client';
 import { JWTPayloadType } from 'src/utils/type';
-import { ROLES_KEY } from 'src/users/decorator/user-role.decorator';
+import { ROLES_KEY } from 'src/auth/decorator/user-role.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {

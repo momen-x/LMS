@@ -1,21 +1,28 @@
 import { User } from 'src/users/entities/user.entity';
 import { RegisterUserDto } from './dto/register-auth.dto';
-import { AuthProvider } from '@prisma/client';
+import { AuthProvider, RefreshTokenSession } from '@prisma/client';
 import { CreateOAuthUserData } from './dto/create-oAuth-user-date.dto';
+import { CreateRefreshTokenSessionData } from './types/refresh-token.type';
 
 export abstract class AuthRepository {
   abstract findByEmail(email: string): Promise<User | null>;
   abstract findById(id: string): Promise<User | null>;
   abstract create(data: RegisterUserDto): Promise<User>;
+  abstract createRefreshTokenSession(
+    userId: string,
+    data: CreateRefreshTokenSessionData,
+  ): Promise<RefreshTokenSession>;
+  abstract updateRefreshTokenSessionHash(
+    sessionId: string,
+    tokenHash: string,
+  ): Promise<void>;
+  abstract findRefreshTokenSessionById(
+    sessionId: string,
+  ): Promise<RefreshTokenSession | null>;
+  abstract revokeRefreshTokenSession(sessionId: string): Promise<void>;
+  abstract revokeAllUserSessions(userId: string): Promise<void>;
   abstract updateLastLogin(id: string): Promise<User>;
-  abstract updateRefreshToken(
-    id: string,
-    refreshToken: string | null,
-  ): Promise<User>;
-  abstract updateVerificationToken(
-    id: string,
-    verificationToken: string,
-  ): Promise<User>;
+
   abstract updateEmailVerificationToken(
     userId: string,
     token: string | null,
@@ -36,7 +43,7 @@ export abstract class AuthRepository {
     userId: string,
     passwordResetToken: string,
     passwordResetExpires: Date,
-  );
+  ): Promise<void>;
   abstract resetPassword(userId: string, password: string): Promise<User>;
   abstract findByPasswordResetToken(tokenHash: string): Promise<User | null>;
   abstract findByProviderAccount(

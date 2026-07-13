@@ -72,7 +72,6 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(updateUserDto.newPassword, 12);
     await this.userRepo.updatePassword(id, hashedPassword);
-    await this.userRepo.clearRefreshToken(id);
 
     return { success: true };
   }

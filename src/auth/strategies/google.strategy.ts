@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { AuthProvider } from '@prisma/client';
 import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20';
-import { GoogleUserProfile } from '../types/google-profile.type';
 import { AuthService } from '../auth.service';
+import { ProviderUserProfile } from '../types/provider-profile.type';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
@@ -39,7 +39,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         );
       }
 
-      const googleProfile: GoogleUserProfile = {
+      const googleProfile: ProviderUserProfile = {
         providerId: profile.id,
         email: email.trim().toLowerCase(),
         name: profile.displayName || email.split('@')[0],

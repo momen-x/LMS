@@ -22,8 +22,8 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
-import { AuthenticatedUser } from './decorator/authenticated-user.decorator';
-import { Roles } from './decorator/user-role.decorator';
+import { AuthenticatedUser } from '../auth/decorator/authenticated-user.decorator';
+import { Roles } from '../auth/decorator/user-role.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   UpdateUserNameDto,

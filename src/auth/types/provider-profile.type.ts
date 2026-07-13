@@ -1,6 +1,6 @@
 import { AuthProvider } from '@prisma/client';
 
-export type GithubUserProfile = {
+export type ProviderUserProfile = {
   providerId: string;
   email: string;
   name: string;

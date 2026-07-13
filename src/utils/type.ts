@@ -6,7 +6,3 @@ export type JWTPayloadType = {
   role: UserRole;
   provider: AuthProvider;
 };
-
-export type RefreshTokenPayloadType = {
-  sub: string;
-};
