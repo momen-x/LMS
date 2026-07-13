@@ -9,7 +9,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { LessonResourceDto } from './lesson-resourse.dto';
+import { LessonResourceDto } from './lesson-resources.dto';
 
 export class CreateLessonDto {
   @IsString()

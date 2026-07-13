@@ -9,7 +9,7 @@ export class Lesson {
     public duration: number,
     public order: number,
     public isPreview: boolean,
-    public resources: JsonValue,
+    public resources: JsonValue | null,
     public createdAt: Date,
     public updatedAt: Date,
   ) {}

@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Patch,
   Param,
@@ -9,7 +8,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { LessonService } from './lesson.service';
-import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
@@ -22,38 +20,10 @@ import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorat
 export class LessonController {
   constructor(private readonly lessonService: LessonService) {}
 
-  @Post(':sectionId/lessons')
-  @ApiResponse({ status: 201, description: 'Lesson created successfully' })
-  @ApiOperation({ summary: 'Create a new lesson' })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.instructor)
-  create(
-    @Param('sectionId') sectionId: string,
-    @Body() createLessonDto: CreateLessonDto,
-    @AuthenticatedUser() user: { sub: string; role: UserRole },
-  ) {
-    return this.lessonService.create(
-      user.sub,
-      user.role,
-      createLessonDto,
-      sectionId,
-    );
-  }
-
-  @Get()
-  @ApiResponse({ status: 200, description: 'Get all lessons' })
-  @ApiOperation({ summary: 'Get all lessons' })
-  findAll() {
-    return this.lessonService.findAll();
-  }
-  @Get('section/:sectionId')
-  @ApiResponse({ status: 200, description: 'Get lessons by section id' })
-  @ApiOperation({ summary: 'Get lessons by section id' })
-  findBySectionId(@Param('sectionId') sectionId: string) {
-    return this.lessonService.findBySectionId(sectionId);
-  }
-
   @Get(':id')
+  @ApiResponse({ status: 200, description: 'Lesson found successfully' })
+  @ApiOperation({ summary: 'Get a lesson by id' })
+  @UseGuards(JwtAuthGuard)
   findOne(@Param('id') id: string) {
     return this.lessonService.findOne(id);
   }
@@ -62,7 +32,7 @@ export class LessonController {
   @ApiResponse({ status: 200, description: 'Lesson updated successfully' })
   @ApiOperation({ summary: 'Update a lesson' })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.instructor)
+  @Roles(UserRole.instructor, UserRole.admin)
   update(
     @Param('id') id: string,
     @Body() updateLessonDto: UpdateLessonDto,
@@ -75,7 +45,7 @@ export class LessonController {
   @ApiResponse({ status: 200, description: 'Lesson deleted successfully' })
   @ApiOperation({ summary: 'Delete a lesson' })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.instructor)
+  @Roles(UserRole.instructor, UserRole.admin)
   remove(
     @Param('id') id: string,
     @AuthenticatedUser() user: { sub: string; role: UserRole },

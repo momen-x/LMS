@@ -13,4 +13,5 @@ export abstract class LessonRepository {
   ): Promise<Lesson>;
   abstract update(id: string, dto: UpdateLessonDto): Promise<Lesson>;
   abstract remove(id: string): Promise<Lesson>;
+  abstract getMaxOrder(sectionId: string): Promise<number>;
 }

@@ -7,6 +7,9 @@ export class LessonResourceDto {
   title!: string;
   @IsString()
   @ApiProperty()
-  @IsUrl()
+  @IsUrl({
+    protocols: ['http', 'https'],
+    require_protocol: true,
+  })
   url!: string;
 }

@@ -4,6 +4,7 @@ import { Lesson } from './entities/lesson.entity';
 import { PrismaService } from '../infrastructure/prisma/prisma.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaLessonRepository implements LessonRepository {
@@ -42,7 +43,8 @@ export class PrismaLessonRepository implements LessonRepository {
         ...data,
         sectionId,
         order,
-        resources: JSON.stringify(data.resources),
+        resources: data.resources as unknown as
+          Prisma.InputJsonValue | undefined,
       },
     });
   }
@@ -53,7 +55,10 @@ export class PrismaLessonRepository implements LessonRepository {
       },
       data: {
         ...data,
-        resources: JSON.stringify(data.resources),
+        resources:
+          data.resources === undefined
+            ? undefined
+            : (data.resources as unknown as Prisma.InputJsonValue),
       },
     });
   }
@@ -63,5 +68,13 @@ export class PrismaLessonRepository implements LessonRepository {
         id,
       },
     });
+  }
+  async getMaxOrder(sectionId: string): Promise<number> {
+    const result = await this.prismaService.lesson.aggregate({
+      where: { sectionId },
+      _max: { order: true },
+    });
+
+    return result._max.order ?? 0;
   }
 }

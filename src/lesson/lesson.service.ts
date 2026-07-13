@@ -23,10 +23,8 @@ export class LessonService {
     sectionId: string,
   ) {
     await this.validateInstructorOwnership(instructorId, role, sectionId);
-    const lessons = await this.lessonRepo.findBySectionId(sectionId);
-    const maxOrder = Math.max(...lessons.map((lesson) => lesson.order), 0);
-    const newOrder = maxOrder + 1;
-    return this.lessonRepo.create(createLessonDto, sectionId, newOrder);
+    const maxOrder = await this.lessonRepo.getMaxOrder(sectionId);
+    return this.lessonRepo.create(createLessonDto, sectionId, maxOrder);
   }
 
   findAll() {
@@ -75,8 +73,9 @@ export class LessonService {
     role: UserRole,
     sectionId: string,
   ) {
-    if (role !== UserRole.instructor)
+    if (role !== UserRole.instructor && role !== UserRole.admin)
       throw new ForbiddenException('You are not instructor');
+    if (role === UserRole.admin) return;
     const section = await this.sectionService.findOne(sectionId);
     await this.sectionService.isAuthorized(
       role,
