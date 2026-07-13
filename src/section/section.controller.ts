@@ -43,15 +43,11 @@ export class SectionController {
   @Get()
   @ApiResponse({ status: 200, description: 'get all sections' })
   @ApiOperation({ summary: 'Get all sections' })
+  @UseGuards(JwtAuthGuard)
   findAll() {
     return this.sectionService.findAll();
   }
-  @Get('course/:courseId')
-  @ApiResponse({ status: 200, description: 'get section by course id' })
-  @ApiOperation({ summary: 'get single section' })
-  findByCourseId(@Param('courseId') courseId: string) {
-    return this.sectionService.findByCourseId(courseId);
-  }
+
   @Get(':id')
   @ApiResponse({ status: 200, description: 'get section by id' })
   @ApiOperation({ summary: 'get single section' })
@@ -63,7 +59,7 @@ export class SectionController {
   @ApiResponse({ status: 200, description: 'Update section' })
   @ApiOperation({ summary: 'Update section' })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.instructor)
+  @Roles(UserRole.instructor, UserRole.admin)
   update(
     @Param('id') id: string,
     @Body() updateSectionDto: UpdateSectionDto,
@@ -81,7 +77,7 @@ export class SectionController {
   @ApiResponse({ status: 200, description: 'Delete section' })
   @ApiOperation({ summary: 'Delete section' })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.instructor)
+  @Roles(UserRole.instructor, UserRole.admin)
   remove(
     @Param('id') id: string,
     @AuthenticatedUser() user: { sub: string; role: UserRole },

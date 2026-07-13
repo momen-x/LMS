@@ -11,6 +11,7 @@ import { CategoryModule } from './category/category.module';
 import { CourseModule } from './course/course.module';
 import { SectionModule } from './section/section.module';
 import { LessonModule } from './lesson/lesson.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { LessonModule } from './lesson/lesson.module';
     CourseModule,
     SectionModule,
     LessonModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

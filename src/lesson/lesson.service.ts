@@ -68,18 +68,20 @@ export class LessonService {
     if (!lesson) throw new NotFoundException('Lesson not found');
     return lesson;
   }
-  private async validateInstructorOwnership(
+  async validateInstructorOwnership(
     instructorId: string,
     role: UserRole,
     sectionId: string,
   ) {
     if (role !== UserRole.instructor && role !== UserRole.admin)
-      throw new ForbiddenException('You are not instructor');
+      throw new ForbiddenException(
+        'Only instructors and admins can perform this action',
+      );
     if (role === UserRole.admin) return;
     const section = await this.sectionService.findOne(sectionId);
     await this.sectionService.isAuthorized(
-      role,
       instructorId,
+      role,
       section.courseId,
     );
   }

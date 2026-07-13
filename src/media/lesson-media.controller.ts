@@ -1,0 +1,39 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { MediaService } from './media.service'; // Import Post and UseGuards
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
+import { RolesGuard } from 'src/auth/guard/user-guard.guard';
+import { Roles } from 'src/auth/decorator/user-role.decorator';
+import { UserRole } from '@prisma/client';
+import { CreateMediaDto } from './dto/create-media.dto';
+import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
+
+@Controller('lessons/:lessonId/media')
+export class LessonMediaController {
+  constructor(private readonly mediaService: MediaService) {}
+
+  @Post()
+  @ApiResponse({ status: 201, description: 'Media Created successfully' })
+  @ApiOperation({ summary: 'Create new media' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.admin, UserRole.instructor)
+  create(
+    @Param('lessonId') lessonId: string,
+    @Body() dto: CreateMediaDto,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.mediaService.create(user.sub, user.role, dto, lessonId);
+  }
+  @Get()
+  @ApiResponse({ status: 201, description: 'Media Created successfully' })
+  @ApiOperation({ summary: 'Create new media' })
+  @UseGuards(JwtAuthGuard)
+  findByLessonId(
+    @Param('lessonId') lessonId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    //in the future just the payment user can use this route
+    return this.mediaService.findByLessonId(lessonId);
+  }
+}

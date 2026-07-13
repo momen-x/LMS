@@ -23,7 +23,7 @@ export class SectionService {
     createSectionDto: CreateSectionDto,
     courseId: string,
   ) {
-    await this.isAuthorized(role, instructorId, courseId);
+    await this.isAuthorized(instructorId, role, courseId);
     const existingSection = await this.sectionRepo.findByCourseAndOrder(
       courseId,
       createSectionDto.order,
@@ -55,7 +55,7 @@ export class SectionService {
     updateSectionDto: UpdateSectionDto,
   ) {
     const section = await this.findOrThrow(id);
-    await this.isAuthorized(role, instructorId, section.courseId);
+    await this.isAuthorized(instructorId, role, section.courseId);
 
     if (
       updateSectionDto.order !== undefined &&
@@ -78,7 +78,7 @@ export class SectionService {
 
   async remove(id: string, instructorId: string, role: UserRole) {
     const section = await this.findOrThrow(id);
-    await this.isAuthorized(role, instructorId, section.courseId);
+    await this.isAuthorized(instructorId, role, section.courseId);
 
     return this.sectionRepo.delete(id);
   }
@@ -90,9 +90,12 @@ export class SectionService {
     return section;
   }
 
-  async isAuthorized(role: UserRole, instructorId: string, courseId: string) {
-    if (role !== UserRole.instructor)
-      throw new ForbiddenException('Only instructors can perform this action');
+  async isAuthorized(instructorId: string, role: UserRole, courseId: string) {
+    if (role !== UserRole.instructor && role !== UserRole.admin)
+      throw new ForbiddenException(
+        'Only instructors and admins can perform this action',
+      );
+    if (role === UserRole.admin) return true;
     const course = await this.courseService.findOne(courseId);
     if (course.instructorId !== instructorId)
       throw new ForbiddenException('You are not the owner of this course');
