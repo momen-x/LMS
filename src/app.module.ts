@@ -10,6 +10,7 @@ import { MailModule } from './mail/mail.module';
 import { CategoryModule } from './category/category.module';
 import { CourseModule } from './course/course.module';
 import { SectionModule } from './section/section.module';
+import { LessonModule } from './lesson/lesson.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SectionModule } from './section/section.module';
     CategoryModule,
     CourseModule,
     SectionModule,
+    LessonModule,
   ],
   controllers: [AppController],
   providers: [AppService],

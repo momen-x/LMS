@@ -23,10 +23,7 @@ export class SectionService {
     createSectionDto: CreateSectionDto,
     courseId: string,
   ) {
-    this.isAuthorized(role);
-    const course = await this.courseService.findOne(courseId);
-    if (course.instructorId !== instructorId)
-      throw new ForbiddenException('You are not the owner of this course');
+    await this.isAuthorized(role, instructorId, courseId);
     const existingSection = await this.sectionRepo.findByCourseAndOrder(
       courseId,
       createSectionDto.order,
@@ -57,13 +54,8 @@ export class SectionService {
     role: UserRole,
     updateSectionDto: UpdateSectionDto,
   ) {
-    this.isAuthorized(role);
-
     const section = await this.findOrThrow(id);
-    const course = await this.courseService.findOne(section.courseId);
-
-    if (course.instructorId !== instructorId)
-      throw new ForbiddenException('You are not the owner of this course');
+    await this.isAuthorized(role, instructorId, section.courseId);
 
     if (
       updateSectionDto.order !== undefined &&
@@ -85,12 +77,8 @@ export class SectionService {
   }
 
   async remove(id: string, instructorId: string, role: UserRole) {
-    this.isAuthorized(role);
     const section = await this.findOrThrow(id);
-    const course = await this.courseService.findOne(section.courseId);
-
-    if (course.instructorId !== instructorId)
-      throw new ForbiddenException('You are not the owner of this course');
+    await this.isAuthorized(role, instructorId, section.courseId);
 
     return this.sectionRepo.delete(id);
   }
@@ -102,9 +90,12 @@ export class SectionService {
     return section;
   }
 
-  private isAuthorized(role: UserRole) {
+  async isAuthorized(role: UserRole, instructorId: string, courseId: string) {
     if (role !== UserRole.instructor)
       throw new ForbiddenException('Only instructors can perform this action');
+    const course = await this.courseService.findOne(courseId);
+    if (course.instructorId !== instructorId)
+      throw new ForbiddenException('You are not the owner of this course');
     return true;
   }
 }
