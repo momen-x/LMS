@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { MailModule } from './mail/mail.module';
 import { CategoryModule } from './category/category.module';
 import { CourseModule } from './course/course.module';
+import { SectionModule } from './section/section.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CourseModule } from './course/course.module';
     MailModule,
     CategoryModule,
     CourseModule,
+    SectionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

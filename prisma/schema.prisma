@@ -142,10 +142,11 @@ model Course {
 }
 
 model Section {
-  id        String   @id @default(cuid())
-  courseId  String
-  title     String
-  order     Int
+  id       String @id @default(cuid())
+  courseId String
+  title    String
+  order    Int
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -166,10 +167,9 @@ model Lesson {
   resources   Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  media   Media[]
-  quizzes Quiz[]
+  section     Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  media       Media[]
+  quizzes     Quiz[]
 
   @@unique([sectionId, order])
 }

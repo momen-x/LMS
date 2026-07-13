@@ -17,5 +17,6 @@ import { PrismaCategoryRepository } from 'src/category/category-prisma.repo';
     { provide: CourseRepository, useClass: PrismaCourseRepository },
     { provide: CategoryRepository, useClass: PrismaCategoryRepository },
   ],
+  exports: [CourseService],
 })
 export class CourseModule {}
