@@ -12,7 +12,7 @@ import {
 } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { UserRepository } from './users.repo';
-import { CloudinaryService } from 'src/cloudinary/config/cloudinary.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 type SafeUser = {
   id: string;

@@ -9,7 +9,7 @@ import { CourseWhereFilter } from './types/course-query.type';
 import { CourseRepository } from './course.repo';
 import { CourseStatus, UserRole } from '@prisma/client';
 import { QueryCourseDto } from './dto/search-query.dto';
-import { CloudinaryService } from 'src/cloudinary/config/cloudinary.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { CategoryService } from 'src/category/category.service';
 
 @Injectable()
@@ -26,7 +26,7 @@ export class CourseService {
     createCourseDto: CreateCourseDto,
     file?: Express.Multer.File,
   ) {
-    if (role !== UserRole.instructor) {
+    if (role !== UserRole.instructor && role !== UserRole.admin) {
       throw new ForbiddenException('Failed to create course');
     }
 

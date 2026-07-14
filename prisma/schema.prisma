@@ -155,7 +155,7 @@ model Section {
   lessons Lesson[]
 
   @@unique([courseId, order])
-}
+} 
 
 model Lesson {
   id          String   @id @default(cuid())

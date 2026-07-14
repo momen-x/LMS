@@ -2,8 +2,8 @@ import { CourseLevel, CourseStatus } from '@prisma/client';
 
 export class Course {
   constructor(
-    public categoryId: string,
     public id: string,
+    public categoryId: string,
     public instructorId: string,
     public title: string,
     public description: string,
@@ -14,12 +14,12 @@ export class Course {
     public status: CourseStatus,
     public language: string,
     public averageRating: number,
-    public createdAt: Date,
     public totalStudents: number,
-    public updatedAt: Date,
     public duration: number,
     public lessonsCount: number,
     public publishedAt: Date | null,
+    public createdAt: Date,
+    public updatedAt: Date,
   ) {}
 }
 //   category     Category

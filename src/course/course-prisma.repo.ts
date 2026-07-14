@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CourseRepository } from './course.repo';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { Course } from './entities/course.entity';
+import { Course as PrismaCourse } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { CourseWhereFilter } from './types/course-query.type';
 import { CreateCourseDto } from './dto/create-course.dto';
@@ -11,24 +12,26 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 export class PrismaCourseRepository implements CourseRepository {
   constructor(private readonly prisma: PrismaService) {}
   async find(skip: number, take: number): Promise<Course[]> {
-    return this.prisma.course.findMany({
+    const courses = await this.prisma.course.findMany({
       where: { status: 'published' },
       skip,
       take,
       orderBy: { createdAt: 'desc' },
-    }) as unknown as Promise<Course[]>;
+    });
+    return courses.map(this.returnCourse);
   }
   async findById(id: string): Promise<Course | null> {
-    return this.prisma.course.findUnique({
+    const prismaCourse = await this.prisma.course.findUnique({
       where: { id },
-    }) as unknown as Promise<Course | null>;
+    });
+    return prismaCourse ? this.returnCourse(prismaCourse) : null;
   }
   async findByQuery(
     where: CourseWhereFilter,
     skip: number,
     take: number,
   ): Promise<{ courses: Course[]; total: number }> {
-    const prismaWhere = where as Prisma.CourseWhereInput; // ← cast happens only here in repo
+    const prismaWhere = where as Prisma.CourseWhereInput;
     const [courses, total] = await this.prisma.$transaction([
       this.prisma.course.findMany({
         where: prismaWhere,
@@ -38,7 +41,8 @@ export class PrismaCourseRepository implements CourseRepository {
       }),
       this.prisma.course.count({ where: prismaWhere }),
     ]);
-    return { courses: courses as unknown as Course[], total };
+    // Convert PrismaCourse[] to Course[] entities
+    return { courses: courses.map(this.returnCourse), total };
   }
   async create(
     instructorId: string,
@@ -46,29 +50,45 @@ export class PrismaCourseRepository implements CourseRepository {
     thumbnailURL: string | null,
     thumbnailPublicId: string | null,
   ): Promise<Course> {
-    return this.prisma.course.create({
+    const prismaCourse = await this.prisma.course.create({
       data: {
         ...data,
         instructorId,
         thumbnail: thumbnailURL,
         thumbnailPublicId,
       },
-    }) as unknown as Promise<Course>;
+    });
+    // Convert PrismaCourse to Course entity
+    return this.returnCourse(prismaCourse);
   }
   async update(
     id: string,
     data: UpdateCourseDto,
     thumbnailURL: string | null,
+    thumbnailPublicId?: string, // Added missing parameter from abstract class
   ): Promise<Course> {
-    return this.prisma.course.update({
+    const prismaCourse = await this.prisma.course.update({
       where: { id },
-      data: { ...data, thumbnail: thumbnailURL },
-    }) as unknown as Promise<Course>;
+      data: {
+        ...data,
+        thumbnail: thumbnailURL,
+        ...(thumbnailPublicId !== undefined && { thumbnailPublicId }),
+      },
+    });
+    return this.returnCourse(prismaCourse);
   }
   async delete(id: string): Promise<Course> {
-    return this.prisma.course.update({
+    const prismaCourse = await this.prisma.course.update({
       where: { id },
       data: { status: 'archived' },
-    }) as unknown as Promise<Course>;
+    });
+    return this.returnCourse(prismaCourse);
+  }
+  private returnCourse(this: void, course: PrismaCourse): Course {
+    return {
+      ...course,
+      price: course.price.toNumber(),
+      averageRating: course.averageRating.toNumber(),
+    };
   }
 }

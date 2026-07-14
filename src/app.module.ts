@@ -12,6 +12,7 @@ import { CourseModule } from './course/course.module';
 import { SectionModule } from './section/section.module';
 import { LessonModule } from './lesson/lesson.module';
 import { MediaModule } from './media/media.module';
+import { QuizModule } from './quiz/quiz.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MediaModule } from './media/media.module';
     SectionModule,
     LessonModule,
     MediaModule,
+    QuizModule,
   ],
   controllers: [AppController],
   providers: [AppService],

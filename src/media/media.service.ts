@@ -9,7 +9,7 @@ import { UpdateMediaDto } from './dto/update-media.dto';
 import { LessonService } from 'src/lesson/lesson.service';
 import { MediaRepository } from './media.repo';
 import { UserRole } from '@prisma/client';
-import { CloudinaryService } from 'src/cloudinary/config/cloudinary.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class MediaService {

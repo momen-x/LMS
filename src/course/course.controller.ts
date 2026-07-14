@@ -55,7 +55,7 @@ export class CourseController {
       },
     },
   })
-  @Roles(UserRole.instructor)
+  @Roles(UserRole.instructor, UserRole.admin)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseInterceptors(
     FileInterceptor('thumbnail', {
@@ -153,7 +153,7 @@ export class CourseController {
     },
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.instructor)
+  @Roles(UserRole.instructor, UserRole.admin)
   @UseInterceptors(FileInterceptor('thumbnail'))
   update(
     @Param('id') id: string,

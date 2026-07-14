@@ -5,7 +5,7 @@ import { AuthModule } from 'src/auth/auth.module';
 import { UserRepository } from './users.repo';
 import { PrismaUserRepository } from './users-prisma.repo';
 import { RolesGuard } from '../auth/guard/user-guard.guard';
-import { CloudinaryService } from 'src/cloudinary/config/cloudinary.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Module({
   controllers: [UsersController],
