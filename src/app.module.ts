@@ -13,6 +13,7 @@ import { SectionModule } from './section/section.module';
 import { LessonModule } from './lesson/lesson.module';
 import { MediaModule } from './media/media.module';
 import { QuizModule } from './quiz/quiz.module';
+import { QuestionModule } from './question/question.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { QuizModule } from './quiz/quiz.module';
     LessonModule,
     MediaModule,
     QuizModule,
+    QuestionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

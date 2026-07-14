@@ -4,9 +4,10 @@ import { QuizController } from './quiz.controller';
 import { LessonModule } from 'src/lesson/lesson.module';
 import { PrismaLessonRepository } from 'src/lesson/lesson-prisma.repo';
 import { LessonService } from 'src/lesson/lesson.service';
+import { LessonQuizController } from './Lesson-quiz.controller';
 
 @Module({
-  controllers: [QuizController],
+  controllers: [QuizController, LessonQuizController],
   providers: [
     QuizService,
     { provide: LessonService, useClass: PrismaLessonRepository },
