@@ -8,11 +8,18 @@ import { UpdateMediaDto } from './dto/update-media.dto';
 @Injectable()
 export class PrismaMediaRepository implements MediaRepository {
   constructor(private readonly prisma: PrismaService) {}
-  create(data: CreateMediaDto, lessonId: string): Promise<Media> {
+  create(
+    data: CreateMediaDto,
+    lessonId: string,
+    url: string,
+    urlPublicId?: string,
+  ): Promise<Media> {
     return this.prisma.media.create({
       data: {
         ...data,
         lessonId,
+        url,
+        urlPublicId,
       },
     });
   }
@@ -33,12 +40,17 @@ export class PrismaMediaRepository implements MediaRepository {
       },
     });
   }
-  update(id: string, data: UpdateMediaDto): Promise<Media> {
+  update(
+    id: string,
+    data: UpdateMediaDto,
+    url?: string,
+    urlPublicId?: string,
+  ): Promise<Media> {
     return this.prisma.media.update({
       where: {
         id,
       },
-      data,
+      data: { ...data, urlPublicId, url },
     });
   }
   remove(id: string): Promise<Media> {

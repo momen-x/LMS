@@ -5,11 +5,13 @@ import { LessonModule } from 'src/lesson/lesson.module';
 import { MediaRepository } from './media.repo';
 import { PrismaMediaRepository } from './media-prisma.repo';
 import { LessonMediaController } from './lesson-media.controller';
+import { CloudinaryService } from 'src/cloudinary/config/cloudinary.service';
 
 @Module({
   controllers: [MediaController, LessonMediaController],
   providers: [
     MediaService,
+    CloudinaryService,
     { provide: MediaRepository, useClass: PrismaMediaRepository },
   ],
   imports: [LessonModule],

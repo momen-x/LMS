@@ -5,6 +5,7 @@ export class Media {
     public id: string,
     public lessonId: string,
     public url: string,
+    public urlPublicId: string | null,
     public type: MediaType,
     public duration: number | null,
     public createdAt: Date,

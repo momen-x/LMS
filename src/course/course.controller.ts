@@ -16,7 +16,13 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
-import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { Roles } from 'src/auth/decorator/user-role.decorator';
 import { CourseLevel, UserRole } from '@prisma/client';
 import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
@@ -29,8 +35,26 @@ export class CourseController {
   constructor(private readonly courseService: CourseService) {}
 
   @Post()
-  @ApiResponse({ status: 201, description: 'Service created successfully' })
-  @ApiOperation({ summary: 'Create a new service' })
+  @ApiResponse({ status: 201, description: 'Course created successfully' })
+  @ApiOperation({ summary: 'Create a new course' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        thumbnail: {
+          type: 'string',
+          format: 'binary',
+        },
+        type: {
+          type: 'string',
+        },
+        duration: {
+          type: 'number',
+        },
+      },
+    },
+  })
   @Roles(UserRole.instructor)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseInterceptors(
@@ -108,6 +132,26 @@ export class CourseController {
   }
 
   @Patch(':id')
+  @ApiResponse({ status: 200, description: 'Course updated successfully' })
+  @ApiOperation({ summary: 'Update course' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        thumbnail: {
+          type: 'string',
+          format: 'binary',
+        },
+        type: {
+          type: 'string',
+        },
+        duration: {
+          type: 'number',
+        },
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.instructor)
   @UseInterceptors(FileInterceptor('thumbnail'))

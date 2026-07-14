@@ -44,9 +44,15 @@ export class PrismaCourseRepository implements CourseRepository {
     instructorId: string,
     data: CreateCourseDto,
     thumbnailURL: string | null,
+    thumbnailPublicId: string | null,
   ): Promise<Course> {
     return this.prisma.course.create({
-      data: { ...data, instructorId, thumbnail: thumbnailURL },
+      data: {
+        ...data,
+        instructorId,
+        thumbnail: thumbnailURL,
+        thumbnailPublicId,
+      },
     }) as unknown as Promise<Course>;
   }
   async update(

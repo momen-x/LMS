@@ -15,11 +15,13 @@ export abstract class CourseRepository {
     instructorId: string,
     data: CreateCourseDto,
     thumbnailURL: string | null,
+    thumbnailPublicId: string | null,
   ): Promise<Course>;
   abstract update(
     id: string,
     data: UpdateCourseDto,
     thumbnailURL: string | null,
+    thumbnailPublicId?: string,
   ): Promise<Course>;
   abstract delete(id: string): Promise<Course>;
 }

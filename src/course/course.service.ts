@@ -32,15 +32,22 @@ export class CourseService {
 
     await this.categoryService.findOne(createCourseDto.categoryId);
     let thumbnailURL: string | null = null;
+    let thumbnailPublicId: string | null = null;
     if (file) {
       const uploadedImage = await this.cloudinaryService.uploadFile(
         file,
         'thumbnail',
       );
       thumbnailURL = uploadedImage.url;
+      thumbnailPublicId = uploadedImage.publicId;
     }
 
-    return this.courseRepository.create(id, createCourseDto, thumbnailURL);
+    return this.courseRepository.create(
+      id,
+      createCourseDto,
+      thumbnailURL,
+      thumbnailPublicId,
+    );
   }
 
   findAll(page: number, limit: number) {
@@ -119,7 +126,8 @@ export class CourseService {
     let thumbnailURL: string | null = null;
     if (file) {
       if (course.thumbnail) {
-        await this.cloudinaryService.tryDeleteFile(course.thumbnail);
+        if (course.thumbnailPublicId)
+          await this.cloudinaryService.deleteFile(course.thumbnailPublicId);
       }
       const uploadedImage = await this.cloudinaryService.uploadFile(
         file,
@@ -135,7 +143,9 @@ export class CourseService {
     const course = await this.findOrThrow(id);
     if (course.instructorId !== instructorId)
       throw new ForbiddenException('Failed to delete course');
-
+    if (course.thumbnailPublicId) {
+      await this.cloudinaryService.deleteFile(course.thumbnailPublicId);
+    }
     return this.courseRepository.delete(id);
   }
 

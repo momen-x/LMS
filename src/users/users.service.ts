@@ -77,7 +77,10 @@ export class UsersService {
   }
 
   async removeMyAccount(id: string): Promise<{ success: true }> {
-    await this.findUserOrThrow(id);
+    const user = await this.findUserOrThrow(id);
+    if (user.avatarPublicId) {
+      await this.cloudinaryService.deleteFile(user.avatarPublicId);
+    }
     await this.userRepo.deleteUser(id);
     return { success: true };
   }
@@ -88,7 +91,9 @@ export class UsersService {
     if (user.role === UserRole.admin) {
       throw new ForbiddenException('Admin accounts cannot be deleted here');
     }
-
+    if (user.avatarPublicId) {
+      await this.cloudinaryService.deleteFile(user.avatarPublicId);
+    }
     await this.userRepo.deleteUser(id);
     return { success: true };
   }
@@ -99,6 +104,9 @@ export class UsersService {
       file,
       'users/avatars',
     );
+    if (user.avatar && user.avatarPublicId) {
+      await this.cloudinaryService.deleteFile(user.avatarPublicId);
+    }
     const userImageUrl = image.url;
     const updateUserImage = await this.userRepo.uploadUserAvatar(
       user.id,

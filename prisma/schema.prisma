@@ -110,23 +110,24 @@ model Category {
 }
 
 model Course {
-  id            String       @id @default(cuid())
-  categoryId    String
-  instructorId  String
-  title         String
-  description   String
-  thumbnail     String?
-  price         Decimal      @default(0) @db.Decimal(10, 2)
-  level         CourseLevel  @default(beginner)
-  status        CourseStatus @default(draft)
-  language      String       @default("en")
-  averageRating Decimal      @default(0) @db.Decimal(3, 2)
-  totalStudents Int          @default(0)
-  duration      Int          @default(0)
-  lessonsCount  Int          @default(0)
-  publishedAt   DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id                String       @id @default(cuid())
+  categoryId        String
+  instructorId      String
+  title             String
+  description       String
+  thumbnail         String?
+  thumbnailPublicId String?
+  price             Decimal      @default(0) @db.Decimal(10, 2)
+  level             CourseLevel  @default(beginner)
+  status            CourseStatus @default(draft)
+  language          String       @default("en")
+  averageRating     Decimal      @default(0) @db.Decimal(3, 2)
+  totalStudents     Int          @default(0)
+  duration          Int          @default(0)
+  lessonsCount      Int          @default(0)
+  publishedAt       DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   category     Category      @relation(fields: [categoryId], references: [id])
   instructor   User          @relation("InstructorCourses", fields: [instructorId], references: [id])
@@ -177,7 +178,8 @@ model Lesson {
 model Media {
   id        String    @id @default(cuid())
   lessonId  String
-  url       String
+  urlPublicId       String?
+  url  String
   type      MediaType
   duration  Int?
   createdAt DateTime  @default(now())

@@ -8,15 +8,24 @@ import {
   Param,
   Delete,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { MediaService } from './media.service';
 import { UpdateMediaDto } from './dto/update-media.dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { Roles } from 'src/auth/decorator/user-role.decorator';
-import { UserRole } from '@prisma/client';
+import { MediaType, UserRole } from '@prisma/client';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import multer from 'multer';
 
 @Controller('media')
 export class MediaController {
@@ -46,14 +55,45 @@ export class MediaController {
   @Patch(':id')
   @ApiResponse({ status: 200, description: 'Media Updated successfully' })
   @ApiOperation({ summary: 'Update Media' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+        type: {
+          type: 'string',
+          enum: Object.values(MediaType),
+        },
+        duration: {
+          type: 'number',
+        },
+      },
+    },
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.admin, UserRole.instructor)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: multer.memoryStorage(),
+    }),
+  )
   update(
     @Param('id') id: string,
     @Body() updateMediaDto: UpdateMediaDto,
     @AuthenticatedUser() user: { sub: string; role: UserRole },
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.mediaService.update(id, user.sub, user.role, updateMediaDto);
+    return this.mediaService.update(
+      id,
+      user.sub,
+      user.role,
+      updateMediaDto,
+      file,
+    );
   }
 
   @Delete(':id')

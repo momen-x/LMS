@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MediaType } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
@@ -11,10 +12,16 @@ import {
 } from 'class-validator';
 
 export class CreateMediaDto {
-  @IsString()
-  @IsNotEmpty()
-  @ApiProperty()
-  url!: string;
+  // @IsString()
+  // @IsOptional()
+  // @Transform(({ value }) => {
+  //   if (typeof value === 'string') {
+  //     return value.trim();
+  //   }
+  //   return value;
+  // })
+  // @ApiPropertyOptional({ description: 'file URL of the media' })
+  // url!: string;
   @IsEnum(MediaType)
   @IsNotEmpty()
   @ApiProperty({ enum: MediaType })
