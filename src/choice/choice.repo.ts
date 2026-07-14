@@ -16,5 +16,8 @@ export abstract class ChoiceRepository {
   ): Promise<Choice>;
   abstract delete(id: string): Promise<Choice>;
   abstract countByQuestionId(questionId: string): Promise<number>;
-  abstract findCorrectChoice(questionId: string, excludedChoiceId?: string);
+  abstract findCorrectChoice(
+    questionId: string,
+    excludedChoiceId?: string,
+  ): Promise<Choice | null>;
 }
