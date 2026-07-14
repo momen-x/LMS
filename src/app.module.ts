@@ -14,6 +14,7 @@ import { LessonModule } from './lesson/lesson.module';
 import { MediaModule } from './media/media.module';
 import { QuizModule } from './quiz/quiz.module';
 import { QuestionModule } from './question/question.module';
+import { ChoiceModule } from './choice/choice.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { QuestionModule } from './question/question.module';
     MediaModule,
     QuizModule,
     QuestionModule,
+    ChoiceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
