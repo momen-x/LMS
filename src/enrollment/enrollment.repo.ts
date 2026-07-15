@@ -1,20 +1,9 @@
-import { UserRole } from '@prisma/client';
 import { UpdateEnrollmentProgressDto } from './dto/update-enrollment.dto';
 import { Enrollment } from './entities/enrollment.entity';
-
-export type CreateEnrollmentInput = {
-  studentId: string;
-  courseId: string;
-};
-
-export type SafeEnrollmentStudent = {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string | null;
-  role: UserRole;
-  createdAt: Date;
-};
+import {
+  CreateEnrollmentInput,
+  SafeEnrollmentStudent,
+} from './type/enrollment.type';
 
 export abstract class EnrollmentRepository {
   abstract create(data: CreateEnrollmentInput): Promise<Enrollment>;

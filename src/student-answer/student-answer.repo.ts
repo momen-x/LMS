@@ -1,10 +1,10 @@
-import { CreateStudentAnswerDto } from './dto/create-student-answer.dto';
 import { StudentAnswer } from './entities/student-answer.entity';
+import { CreateStudentInputs } from './types/student-user.type';
 
 export abstract class StudentAnswerRepository {
   abstract create(
     studentId: string,
-    dto: CreateStudentAnswerDto,
+    dto: CreateStudentInputs,
   ): Promise<StudentAnswer>;
 
   abstract findByStudentAndQuestion(

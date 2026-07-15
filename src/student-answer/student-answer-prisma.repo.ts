@@ -1,17 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { StudentAnswerRepository } from './student-answer.repo';
-import { CreateStudentAnswerDto } from './dto/create-student-answer.dto';
 import { StudentAnswer } from './entities/student-answer.entity';
+import { CreateStudentInputs } from './types/student-user.type';
 
 @Injectable()
 export class PrismaStudentAnswerRepository implements StudentAnswerRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(
-    studentId: string,
-    dto: CreateStudentAnswerDto,
-  ): Promise<StudentAnswer> {
+  create(studentId: string, dto: CreateStudentInputs): Promise<StudentAnswer> {
     return this.prisma.studentAnswer.create({
       data: {
         studentId,

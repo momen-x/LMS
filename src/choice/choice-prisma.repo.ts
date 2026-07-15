@@ -1,16 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { ChoiceRepository } from './choice.repo';
-import { CreateChoiceDto } from './dto/create-choice.dto';
 import { Choice } from './entities/choice.entity';
-import { UpdateChoiceDto } from './dto/update-choice.dto';
+import { CreateChoiceInput, UpdateChoiceInput } from './types/choice.type';
 
 @Injectable()
 export class PrismaChoiceRepository implements ChoiceRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   create(
-    createChoiceDto: CreateChoiceDto,
+    createChoiceDto: CreateChoiceInput,
     questionId: string,
   ): Promise<Choice> {
     return this.prisma.choice.create({
@@ -38,7 +37,7 @@ export class PrismaChoiceRepository implements ChoiceRepository {
       },
     });
   }
-  update(id: string, updateChoiceDto: UpdateChoiceDto): Promise<Choice> {
+  update(id: string, updateChoiceDto: UpdateChoiceInput): Promise<Choice> {
     return this.prisma.choice.update({
       where: {
         id,

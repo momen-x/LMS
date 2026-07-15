@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsEmail,
+  IsEnum,
   IsNotEmpty,
   IsString,
   MinLength,
@@ -19,6 +20,9 @@ export class CreateOAuthUserData {
   @MinLength(8)
   @ApiProperty()
   name!: string;
+  @ApiProperty({ enum: ['google', 'github'] })
+  @IsEnum(['google', 'github'])
+  @IsNotEmpty()
   provider!: 'google' | 'github';
   @ApiProperty()
   @IsString()

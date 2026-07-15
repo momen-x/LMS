@@ -1,13 +1,12 @@
 import { User } from 'src/users/entities/user.entity';
-import { RegisterUserDto } from './dto/register-auth.dto';
 import { AuthProvider, RefreshTokenSession } from '@prisma/client';
-import { CreateOAuthUserData } from './dto/create-oAuth-user-date.dto';
 import { CreateRefreshTokenSessionData } from './types/refresh-token.type';
+import { CreateOAuthUserInput, RegisterUserInput } from './types/auth.type';
 
 export abstract class AuthRepository {
   abstract findByEmail(email: string): Promise<User | null>;
   abstract findById(id: string): Promise<User | null>;
-  abstract create(data: RegisterUserDto): Promise<User>;
+  abstract create(data: RegisterUserInput): Promise<User>;
   abstract createRefreshTokenSession(
     userId: string,
     data: CreateRefreshTokenSessionData,
@@ -51,5 +50,5 @@ export abstract class AuthRepository {
     providerId: string,
   ): Promise<User | null>;
 
-  abstract createOAuthUser(data: CreateOAuthUserData): Promise<User>;
+  abstract createOAuthUser(data: CreateOAuthUserInput): Promise<User>;
 }

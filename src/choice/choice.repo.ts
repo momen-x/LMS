@@ -1,10 +1,9 @@
-import { CreateChoiceDto } from './dto/create-choice.dto';
-import { UpdateChoiceDto } from './dto/update-choice.dto';
 import { Choice } from './entities/choice.entity';
+import { CreateChoiceInput, UpdateChoiceInput } from './types/choice.type';
 
 export abstract class ChoiceRepository {
   abstract create(
-    createChoiceDto: CreateChoiceDto,
+    createChoiceDto: CreateChoiceInput,
     questionId: string,
   ): Promise<Choice>;
   abstract findAll(): Promise<Choice[]>;
@@ -12,7 +11,7 @@ export abstract class ChoiceRepository {
   abstract findOne(id: string): Promise<Choice | null>;
   abstract update(
     id: string,
-    updateChoiceDto: UpdateChoiceDto,
+    updateChoiceDto: UpdateChoiceInput,
   ): Promise<Choice>;
   abstract delete(id: string): Promise<Choice>;
   abstract countByQuestionId(questionId: string): Promise<number>;

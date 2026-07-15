@@ -5,8 +5,7 @@ import { Course } from './entities/course.entity';
 import { Course as PrismaCourse } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { CourseWhereFilter } from './types/course-query.type';
-import { CreateCourseDto } from './dto/create-course.dto';
-import { UpdateCourseDto } from './dto/update-course.dto';
+import { CreateCourseInput, UpdateCourseInput } from './types/course.type';
 
 @Injectable()
 export class PrismaCourseRepository implements CourseRepository {
@@ -46,7 +45,7 @@ export class PrismaCourseRepository implements CourseRepository {
   }
   async create(
     instructorId: string,
-    data: CreateCourseDto,
+    data: CreateCourseInput,
     thumbnailURL: string | null,
     thumbnailPublicId: string | null,
   ): Promise<Course> {
@@ -63,7 +62,7 @@ export class PrismaCourseRepository implements CourseRepository {
   }
   async update(
     id: string,
-    data: UpdateCourseDto,
+    data: UpdateCourseInput,
     thumbnailURL: string | null,
     thumbnailPublicId?: string, // Added missing parameter from abstract class
   ): Promise<Course> {

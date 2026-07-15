@@ -3,11 +3,11 @@ import { PaymentStatus } from '@prisma/client';
 import { UpdateEnrollmentProgressDto } from './dto/update-enrollment.dto';
 import {
   CreateEnrollmentInput,
-  EnrollmentRepository,
   SafeEnrollmentStudent,
-} from './enrollment.repo';
+} from './type/enrollment.type';
 import { Enrollment } from './entities/enrollment.entity';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
+import { EnrollmentRepository } from './enrollment.repo';
 
 @Injectable()
 export class PrismaEnrollmentRepository implements EnrollmentRepository {

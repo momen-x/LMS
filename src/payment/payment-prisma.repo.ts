@@ -82,7 +82,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
   async markAsExpired(id: string): Promise<void> {
     await this.prisma.payment.updateMany({
       where: { id, status: PaymentStatus.pending },
-      data: { status: PaymentStatus.expired },
+      data: { status: 'expired' },
     });
   }
 }

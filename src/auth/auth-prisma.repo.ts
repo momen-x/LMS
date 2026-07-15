@@ -1,14 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable } from '@nestjs/common';
-import { RegisterUserDto } from './dto/register-auth.dto';
 import { AuthRepository } from './auth.repo';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { User } from 'src/users/entities/user.entity';
-import { CreateOAuthUserData } from './dto/create-oAuth-user-date.dto';
 import { AuthProvider, RefreshTokenSession } from '@prisma/client';
 import { CreateRefreshTokenSessionData } from './types/refresh-token.type';
+import { CreateOAuthUserInput, RegisterUserInput } from './types/auth.type';
 
 @Injectable()
 export class PrismaAuthRepository implements AuthRepository {
@@ -34,7 +30,7 @@ export class PrismaAuthRepository implements AuthRepository {
     return user;
   }
 
-  async create(data: RegisterUserDto): Promise<User> {
+  async create(data: RegisterUserInput): Promise<User> {
     const newUser = await this.prisma.user.create({
       data,
     });
@@ -186,7 +182,7 @@ export class PrismaAuthRepository implements AuthRepository {
     });
   }
 
-  async createOAuthUser(data: CreateOAuthUserData): Promise<User> {
+  async createOAuthUser(data: CreateOAuthUserInput): Promise<User> {
     return this.prisma.user.create({
       data: {
         email: data.email,

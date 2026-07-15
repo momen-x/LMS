@@ -2,14 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { MediaRepository } from './media.repo';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { Media } from './entities/media.entity';
-import { CreateMediaDto } from './dto/create-media.dto';
-import { UpdateMediaDto } from './dto/update-media.dto';
+import { CreateMediaInputs, UpdateMediaInputs } from './types/media.type';
 
 @Injectable()
 export class PrismaMediaRepository implements MediaRepository {
   constructor(private readonly prisma: PrismaService) {}
   create(
-    data: CreateMediaDto,
+    data: CreateMediaInputs,
     lessonId: string,
     url: string,
     urlPublicId?: string,
@@ -42,7 +41,7 @@ export class PrismaMediaRepository implements MediaRepository {
   }
   update(
     id: string,
-    data: UpdateMediaDto,
+    data: UpdateMediaInputs,
     url?: string,
     urlPublicId?: string,
   ): Promise<Media> {

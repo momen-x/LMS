@@ -1,6 +1,5 @@
-import { CreateSectionDto } from './dto/create-section.dto';
-import { UpdateSectionDto } from './dto/update-section.dto';
 import { Section } from './entities/section.entity';
+import { CreateSectionInputs, UpdateCourseInputs } from './types/section.type';
 
 export abstract class SectionRepository {
   abstract find(): Promise<Section[]>;
@@ -10,7 +9,10 @@ export abstract class SectionRepository {
     courseId: string,
     order: number,
   ): Promise<Section | null>;
-  abstract create(data: CreateSectionDto, courseId: string): Promise<Section>;
-  abstract update(id: string, data: UpdateSectionDto): Promise<Section>;
+  abstract create(
+    data: CreateSectionInputs,
+    courseId: string,
+  ): Promise<Section>;
+  abstract update(id: string, data: UpdateCourseInputs): Promise<Section>;
   abstract delete(id: string): Promise<Section>;
 }

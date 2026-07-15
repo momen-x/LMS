@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { CategoryRepository } from './category.repo';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { Category } from './entities/category.entity';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
+import {
+  CreateCategoryInputs,
+  UpdateCategoryInputs,
+} from './types/category.type';
 
 @Injectable()
 export class PrismaCategoryRepository implements CategoryRepository {
@@ -28,13 +30,13 @@ export class PrismaCategoryRepository implements CategoryRepository {
     return category;
   }
 
-  async create(data: CreateCategoryDto) {
+  async create(data: CreateCategoryInputs) {
     const category = await this.prisma.category.create({
       data,
     });
     return category;
   }
-  async update(id: string, data: UpdateCategoryDto) {
+  async update(id: string, data: UpdateCategoryInputs) {
     const category = await this.prisma.category.update({
       where: { id },
       data,

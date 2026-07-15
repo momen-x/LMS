@@ -1,10 +1,9 @@
-import { CreateMediaDto } from './dto/create-media.dto';
-import { UpdateMediaDto } from './dto/update-media.dto';
 import { Media } from './entities/media.entity';
+import { CreateMediaInputs, UpdateMediaInputs } from './types/media.type';
 
 export abstract class MediaRepository {
   abstract create(
-    data: CreateMediaDto,
+    data: CreateMediaInputs,
     lessonId: string,
     url: string,
     urlPublicId?: string,
@@ -14,7 +13,7 @@ export abstract class MediaRepository {
   abstract findByLessonId(lessonId: string): Promise<Media[]>;
   abstract update(
     id: string,
-    data: UpdateMediaDto,
+    data: UpdateMediaInputs,
     url?: string,
     urlPublicId?: string,
   ): Promise<Media>;

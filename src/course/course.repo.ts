@@ -1,7 +1,6 @@
 import { Course } from './entities/course.entity';
 import { CourseWhereFilter } from './types/course-query.type';
-import { CreateCourseDto } from './dto/create-course.dto';
-import { UpdateCourseDto } from './dto/update-course.dto';
+import { CreateCourseInput, UpdateCourseInput } from './types/course.type';
 
 export abstract class CourseRepository {
   abstract find(skip: number, take: number): Promise<Course[]>;
@@ -13,13 +12,13 @@ export abstract class CourseRepository {
   ): Promise<{ courses: Course[]; total: number }>;
   abstract create(
     instructorId: string,
-    data: CreateCourseDto,
+    data: CreateCourseInput,
     thumbnailURL: string | null,
     thumbnailPublicId: string | null,
   ): Promise<Course>;
   abstract update(
     id: string,
-    data: UpdateCourseDto,
+    data: UpdateCourseInput,
     thumbnailURL: string | null,
     thumbnailPublicId?: string,
   ): Promise<Course>;
