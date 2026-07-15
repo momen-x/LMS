@@ -15,6 +15,7 @@ import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
     CloudinaryService,
     { provide: UserRepository, useClass: PrismaUserRepository },
   ],
+  exports: [UsersService],
   imports: [AuthModule],
 })
 export class UsersModule {}

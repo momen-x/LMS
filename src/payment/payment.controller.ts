@@ -1,24 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Req,
-} from '@nestjs/common';
+import { Controller, Post, Param, UseGuards, Req } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
 import { UserRole } from '@prisma/client';
-import { ApiBearerAuth, ApiExcludeEndpoint, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiExcludeEndpoint,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
-import * as express from 'express';
-
-// import { CreatePaymentDto } from './dto/create-payment.dto';
-// import { UpdatePaymentDto } from './dto/update-payment.dto';
+import type { Request } from 'express';
+import { RolesGuard } from 'src/auth/guard/user-guard.guard';
+import { Roles } from 'src/auth/decorator/user-role.decorator';
 
 @Controller('payment')
 export class PaymentController {
@@ -32,7 +25,8 @@ export class PaymentController {
   @ApiResponse({ status: 404, description: 'Not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.student, UserRole.instructor, UserRole.admin)
   create(
     // @Body() createPaymentDto: CreatePaymentDto,
     @Param('courseId') courseId: string,
@@ -46,7 +40,7 @@ export class PaymentController {
   }
   @ApiExcludeEndpoint()
   @Post('webhook')
-  async webhook(@Req() req: express.Request) {
+  async webhook(@Req() req: RawBodyRequest<Request>) {
     return this.paymentService.handleWebhook(req);
   }
 }

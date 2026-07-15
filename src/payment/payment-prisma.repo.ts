@@ -34,21 +34,6 @@ export class PrismaPaymentRepository implements PaymentRepository {
     });
   }
 
-  updateStatus(
-    id: string,
-    status: PaymentStatus,
-    stripePaymentId?: string,
-  ): Promise<Payment> {
-    return this.prisma.payment.update({
-      where: {
-        id,
-      },
-      data: {
-        status,
-        stripePaymentId,
-      },
-    });
-  }
   findPendingPayment(
     studentId: string,
     courseId: string,
@@ -61,27 +46,43 @@ export class PrismaPaymentRepository implements PaymentRepository {
           equals: PaymentStatus.pending,
         },
       },
+      orderBy: { createdAt: 'desc' },
     });
   }
-  markAsCompleted(id: string, stripePaymentId: string): Promise<Payment> {
-    return this.prisma.payment.update({
-      where: {
-        id,
-      },
-      data: {
-        status: PaymentStatus.completed,
-        stripePaymentId,
-      },
+  completePaymentAndCreateEnrollment(
+    paymentId: string,
+    studentId: string,
+    courseId: string,
+    stripePaymentId: string,
+  ): Promise<Payment> {
+    return this.prisma.$transaction(async (transaction) => {
+      const payment = await transaction.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: PaymentStatus.completed,
+          stripePaymentId,
+        },
+      });
+      await transaction.enrollment.upsert({
+        where: { studentId_courseId: { studentId, courseId } },
+        create: { studentId, courseId },
+        update: {},
+      });
+      return payment;
     });
   }
-  markAsFailed(id: string): Promise<Payment> {
-    return this.prisma.payment.update({
-      where: {
-        id,
-      },
+  async markAsFailed(id: string): Promise<void> {
+    await this.prisma.payment.updateMany({
+      where: { id, status: PaymentStatus.pending },
       data: {
         status: PaymentStatus.failed,
       },
+    });
+  }
+  async markAsExpired(id: string): Promise<void> {
+    await this.prisma.payment.updateMany({
+      where: { id, status: PaymentStatus.pending },
+      data: { status: PaymentStatus.expired },
     });
   }
 }

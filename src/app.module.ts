@@ -17,6 +17,7 @@ import { QuestionModule } from './question/question.module';
 import { ChoiceModule } from './choice/choice.module';
 import { StudentAnswerModule } from './student-answer/student-answer.module';
 import { PaymentModule } from './payment/payment.module';
+import { EnrollmentModule } from './enrollment/enrollment.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { PaymentModule } from './payment/payment.module';
     ChoiceModule,
     StudentAnswerModule,
     PaymentModule,
+    EnrollmentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
