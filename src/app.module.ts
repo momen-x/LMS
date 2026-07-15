@@ -19,6 +19,8 @@ import { StudentAnswerModule } from './student-answer/student-answer.module';
 import { PaymentModule } from './payment/payment.module';
 import { EnrollmentModule } from './enrollment/enrollment.module';
 import { CertificateModule } from './certificate/certificate.module';
+import { NotificationModule } from './notification/notification.module';
+import { ReviewModule } from './review/review.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { CertificateModule } from './certificate/certificate.module';
     PaymentModule,
     EnrollmentModule,
     CertificateModule,
+    NotificationModule,
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [AppService],

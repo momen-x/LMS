@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { PaymentStatus, Prisma } from '@prisma/client';
+import { NotificationType, PaymentStatus, Prisma } from '@prisma/client';
 import { PaymentService } from './payment.service';
 
 describe('PaymentService', () => {
@@ -36,6 +36,7 @@ describe('PaymentService', () => {
     const enrollmentService = {
       validateEnrollmentCreation: jest.fn().mockResolvedValue({}),
     };
+    const notificationsService = { create: jest.fn().mockResolvedValue({}) };
     const config = {
       getOrThrow: jest.fn((key: string) => {
         const values: Record<string, string> = {
@@ -52,6 +53,7 @@ describe('PaymentService', () => {
       paymentRepo as never,
       courseService as never,
       enrollmentService as never,
+      notificationsService as never,
     );
     const stripe: any = {
       checkout: {
@@ -65,7 +67,13 @@ describe('PaymentService', () => {
       webhooks: { constructEvent: jest.fn() },
     };
     Object.assign(service as object, { stripe });
-    return { service, paymentRepo, enrollmentService, stripe };
+    return {
+      service,
+      paymentRepo,
+      enrollmentService,
+      notificationsService,
+      stripe,
+    };
   }
 
   it('rejects checkout when the user is already enrolled', async () => {
@@ -166,5 +174,32 @@ describe('PaymentService', () => {
       'course-1',
       'pi_1',
     );
+  });
+
+  it('creates an enrollment-success notification after first completion', async () => {
+    const { service, paymentRepo, notificationsService, stripe } = setup();
+    paymentRepo.findByStripeSessionId.mockResolvedValue(pendingPayment);
+    stripe.webhooks.constructEvent.mockReturnValue({
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_old',
+          payment_status: 'paid',
+          payment_intent: 'pi_1',
+        },
+      },
+    });
+
+    await service.handleWebhook({
+      headers: { 'stripe-signature': 'signature' },
+      rawBody: Buffer.from('{}'),
+    } as never);
+
+    expect(notificationsService.create).toHaveBeenCalledWith({
+      userId: 'user-1',
+      title: 'Enrollment successful',
+      text: 'You have successfully enrolled in NestJS.',
+      type: NotificationType.success,
+    });
   });
 });

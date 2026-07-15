@@ -5,6 +5,8 @@ import { PrismaCertificateRepository } from './certificate-prisma.repo';
 import { CertificateRepository } from './certificate.repo';
 import { EnrollmentModule } from 'src/enrollment/enrollment.module';
 import { UsersModule } from 'src/users/users.module';
+import { NotificationModule } from 'src/notification/notification.module';
+import { CourseModule } from 'src/course/course.module';
 
 @Module({
   controllers: [CertificateController],
@@ -13,6 +15,6 @@ import { UsersModule } from 'src/users/users.module';
     { provide: CertificateRepository, useClass: PrismaCertificateRepository },
   ],
   exports: [CertificateService],
-  imports: [EnrollmentModule, UsersModule],
+  imports: [EnrollmentModule, UsersModule, CourseModule, NotificationModule],
 })
 export class CertificateModule {}

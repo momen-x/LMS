@@ -5,6 +5,7 @@ import { CourseModule } from 'src/course/course.module';
 import { PaymentRepository } from './payment.repo';
 import { PrismaPaymentRepository } from './payment-prisma.repo';
 import { EnrollmentModule } from 'src/enrollment/enrollment.module';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   controllers: [PaymentController],
@@ -16,6 +17,6 @@ import { EnrollmentModule } from 'src/enrollment/enrollment.module';
     },
   ],
   exports: [PaymentService],
-  imports: [CourseModule, EnrollmentModule],
+  imports: [CourseModule, EnrollmentModule, NotificationModule],
 })
 export class PaymentModule {}

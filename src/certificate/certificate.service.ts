@@ -2,20 +2,27 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CertificateRepository } from './certificate.repo';
-import { UserRole } from '@prisma/client';
+import { NotificationType, UserRole } from '@prisma/client';
 import { EnrollmentService } from 'src/enrollment/enrollment.service';
 import { randomUUID } from 'crypto';
 import { UsersService } from 'src/users/users.service';
+import { NotificationsService } from 'src/notification/notification.service';
+import { CourseService } from 'src/course/course.service';
 
 @Injectable()
 export class CertificateService {
+  private readonly logger = new Logger(CertificateService.name);
+
   constructor(
     private readonly certificateRepository: CertificateRepository,
     private readonly enrollmentService: EnrollmentService,
     private readonly userService: UsersService,
+    private readonly courseService: CourseService,
+    private readonly notificationsService: NotificationsService,
   ) {}
   async create(
     instructorId: string,
@@ -49,11 +56,25 @@ export class CertificateService {
         'Certificate already exists for this student and course',
       );
     }
-    return this.certificateRepository.create({
+    const certificate = await this.certificateRepository.create({
       studentId,
       courseId,
       certificateNumber,
     });
+    try {
+      const course = await this.courseService.findOne(courseId);
+      await this.notificationsService.create({
+        userId: studentId,
+        title: 'Certificate issued',
+        text: `Your certificate for ${course.title} is now available.`,
+        type: NotificationType.success,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Certificate ${certificate.id} was issued but its notification failed: ${this.errorMessage(error)}`,
+      );
+    }
+    return certificate;
   }
 
   findAll() {
@@ -171,5 +192,8 @@ export class CertificateService {
       throw new BadRequestException(
         'Certificate does not belong to this course',
       );
+  }
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
   }
 }

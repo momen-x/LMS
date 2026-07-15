@@ -4,9 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { CourseService } from 'src/course/course.service';
 import { PaymentRepository } from './payment.repo';
-import { PaymentStatus, Prisma } from '@prisma/client';
+import { NotificationType, PaymentStatus, Prisma } from '@prisma/client';
 import type { Request } from 'express';
 import { EnrollmentService } from 'src/enrollment/enrollment.service';
+import { NotificationsService } from 'src/notification/notification.service';
 
 @Injectable()
 export class PaymentService {
@@ -19,6 +20,7 @@ export class PaymentService {
     private readonly paymentRepo: PaymentRepository,
     private readonly courseService: CourseService,
     private readonly enrollmentService: EnrollmentService,
+    private readonly notificationsService: NotificationsService,
   ) {
     this.stripe = new Stripe(this.config.getOrThrow('STRIPE_SECRET_KEY'));
     this.FRONTEND_URL = this.config.getOrThrow('FRONTEND_URL');
@@ -171,6 +173,21 @@ export class PaymentService {
       payment.courseId,
       stripePaymentId,
     );
+    if (payment.status !== PaymentStatus.completed) {
+      try {
+        const course = await this.courseService.findOne(payment.courseId);
+        await this.notificationsService.create({
+          userId: payment.studentId,
+          title: 'Enrollment successful',
+          text: `You have successfully enrolled in ${course.title}.`,
+          type: NotificationType.success,
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Payment ${payment.id} completed but its notification failed: ${this.errorMessage(error)}`,
+        );
+      }
+    }
   }
   private async handleCheckoutExpired(session: Stripe.Checkout.Session) {
     const payment = await this.paymentRepo.findByStripeSessionId(session.id);
