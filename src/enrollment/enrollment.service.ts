@@ -43,6 +43,14 @@ export class EnrollmentService {
   async findCourseStudent(courseId: string) {
     return this.enrollmentRepository.findCourseStudent(courseId);
   }
+  async findByStudentAndCourse(studentId: string, courseId: string) {
+    const enrollment = await this.enrollmentRepository.findByStudentAndCourse(
+      studentId,
+      courseId,
+    );
+    if (!enrollment) throw new NotFoundException('Enrollment not found');
+    return enrollment;
+  }
 
   findOne(id: string) {
     return this.findOrThrow(id);
@@ -85,14 +93,7 @@ export class EnrollmentService {
   }
   async validateEnrollmentCreation(studentId: string, courseId: string) {
     const user = await this.userService.findOne(studentId);
-    const allowedRoles: UserRole[] = [
-      UserRole.student,
-      UserRole.instructor,
-      UserRole.admin,
-    ];
-    if (!allowedRoles.includes(user.role)) {
-      throw new ForbiddenException('This user role cannot enroll in courses');
-    }
+
     const course = await this.courseService.findOne(courseId);
     const enrollment = await this.enrollmentRepository.findByStudentAndCourse(
       studentId,

@@ -18,6 +18,7 @@ import { ChoiceModule } from './choice/choice.module';
 import { StudentAnswerModule } from './student-answer/student-answer.module';
 import { PaymentModule } from './payment/payment.module';
 import { EnrollmentModule } from './enrollment/enrollment.module';
+import { CertificateModule } from './certificate/certificate.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { EnrollmentModule } from './enrollment/enrollment.module';
     StudentAnswerModule,
     PaymentModule,
     EnrollmentModule,
+    CertificateModule,
   ],
   controllers: [AppController],
   providers: [AppService],
