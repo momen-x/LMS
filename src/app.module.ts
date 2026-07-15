@@ -16,6 +16,7 @@ import { QuizModule } from './quiz/quiz.module';
 import { QuestionModule } from './question/question.module';
 import { ChoiceModule } from './choice/choice.module';
 import { StudentAnswerModule } from './student-answer/student-answer.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { StudentAnswerModule } from './student-answer/student-answer.module';
     QuestionModule,
     ChoiceModule,
     StudentAnswerModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
