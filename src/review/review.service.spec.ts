@@ -3,7 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { validate } from 'class-validator';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewService } from './review.service';
@@ -91,6 +91,29 @@ describe('ReviewService', () => {
         title: 'New course review',
       }),
     );
+  });
+
+  it('still returns the created review when notification delivery fails', async () => {
+    const { service, notificationsService } = setup();
+    notificationsService.create.mockRejectedValue(new Error('Unavailable'));
+
+    await expect(
+      service.create('student-1', 'course-1', { rating: 5 }),
+    ).resolves.toBe(review);
+  });
+
+  it('maps a database duplicate race to a conflict', async () => {
+    const { service, repository } = setup();
+    repository.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.8.0',
+      }),
+    );
+
+    await expect(
+      service.create('student-1', 'course-1', { rating: 5 }),
+    ).rejects.toThrow(ConflictException);
   });
 
   it('allows only the owner to update a review', async () => {

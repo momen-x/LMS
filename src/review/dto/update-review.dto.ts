@@ -9,14 +9,17 @@ import {
 } from 'class-validator';
 
 export class UpdateReviewDto {
-  @ApiPropertyOptional({ minimum: 1, maximum: 5 })
+  @ApiPropertyOptional({ minimum: 1, maximum: 5, example: 4 })
   @IsInt()
   @Min(1)
   @Max(5)
   @IsOptional()
   rating?: number;
 
-  @ApiPropertyOptional({ maxLength: 2000 })
+  @ApiPropertyOptional({
+    maxLength: 2000,
+    example: 'Updated after completing the final section.',
+  })
   @IsString()
   @MaxLength(2000)
   @IsOptional()

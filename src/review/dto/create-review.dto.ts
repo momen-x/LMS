@@ -15,7 +15,10 @@ export class CreateReviewDto {
   @Max(5)
   rating!: number;
 
-  @ApiPropertyOptional({ maxLength: 2000 })
+  @ApiPropertyOptional({
+    maxLength: 2000,
+    example: 'Clear explanations and useful exercises.',
+  })
   @IsString()
   @MaxLength(2000)
   @IsOptional()

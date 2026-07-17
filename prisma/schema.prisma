@@ -236,6 +236,7 @@ model Review {
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, courseId])
+  @@index([courseId])
 }
 
 model Quiz {

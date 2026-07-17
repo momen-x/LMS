@@ -28,16 +28,16 @@ export class ReviewService {
   ) {}
 
   async create(
-    studentId: string,
+    userId: string,
     courseId: string,
     data: CreateReviewDto,
   ): Promise<Review> {
     const course = await this.courseService.findOne(courseId);
-    if (course.instructorId === studentId) {
+    if (course.instructorId === userId) {
       throw new ForbiddenException('You cannot review your own course');
     }
     try {
-      await this.enrollmentService.findByStudentAndCourse(studentId, courseId);
+      await this.enrollmentService.findByStudentAndCourse(userId, courseId);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw new ForbiddenException(
@@ -46,15 +46,13 @@ export class ReviewService {
       }
       throw error;
     }
-    if (
-      await this.reviewRepository.findByStudentAndCourse(studentId, courseId)
-    ) {
+    if (await this.reviewRepository.findByStudentAndCourse(userId, courseId)) {
       throw new ConflictException('You have already reviewed this course');
     }
 
     let review: Review;
     try {
-      review = await this.reviewRepository.create(studentId, courseId, data);
+      review = await this.reviewRepository.create(userId, courseId, data);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

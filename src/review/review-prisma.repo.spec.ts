@@ -25,6 +25,10 @@ describe('PrismaReviewRepository', () => {
       review: {
         findMany: jest.fn().mockResolvedValue([]),
         count: jest.fn().mockResolvedValue(0),
+        aggregate: jest.fn().mockResolvedValue({
+          _avg: { rating: average },
+          _count: { _all: 2 },
+        }),
       },
       $transaction: jest.fn((input: any) =>
         typeof input === 'function' ? input(transaction) : Promise.all(input),
@@ -79,5 +83,16 @@ describe('PrismaReviewRepository', () => {
     });
     expect(query.include.student.select).not.toHaveProperty('password');
     expect(query.include.student.select).not.toHaveProperty('providerId');
+  });
+
+  it('returns course rating statistics', async () => {
+    const { repository } = setup(4.5);
+
+    await expect(
+      repository.getCourseRatingAggregate('course-1'),
+    ).resolves.toEqual({
+      averageRating: 4.5,
+      totalReviews: 2,
+    });
   });
 });
