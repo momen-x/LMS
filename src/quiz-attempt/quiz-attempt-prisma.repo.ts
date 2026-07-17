@@ -1,0 +1,134 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+import { Injectable } from '@nestjs/common';
+import { QuizAttemptStatus, StudentAnswer } from '@prisma/client';
+
+import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
+import { QuizAttemptRepository } from './quiz-attempt.repo';
+import { QuizAttempt } from './entities/quiz-attempt.entity';
+
+@Injectable()
+export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  create(
+    studentId: string,
+    quizId: string,
+    attemptNumber: number,
+  ): Promise<QuizAttempt> {
+    return this.prisma.quizAttempt.create({
+      data: {
+        studentId,
+        quizId,
+        attemptNumber,
+      },
+    });
+  }
+
+  findOne(id: string): Promise<QuizAttempt | null> {
+    return this.prisma.quizAttempt.findUnique({
+      where: { id },
+    });
+  }
+
+  findActiveAttempt(
+    studentId: string,
+    quizId: string,
+  ): Promise<QuizAttempt | null> {
+    return this.prisma.quizAttempt.findFirst({
+      where: {
+        studentId,
+        quizId,
+        status: QuizAttemptStatus.in_progress,
+      },
+    });
+  }
+
+  countStudentAttempts(studentId: string, quizId: string): Promise<number> {
+    return this.prisma.quizAttempt.count({
+      where: {
+        studentId,
+        quizId,
+      },
+    });
+  }
+
+  saveAnswer(
+    attemptId: string,
+    questionId: string,
+    choiceId: string,
+  ): Promise<StudentAnswer> {
+    return this.prisma.studentAnswer.upsert({
+      where: {
+        attemptId_questionId: {
+          attemptId,
+          questionId,
+        },
+      },
+      update: {
+        choiceId,
+      },
+      create: {
+        attemptId,
+        questionId,
+        choiceId,
+      },
+    });
+  }
+
+  findAnswers(attemptId: string) {
+    return this.prisma.studentAnswer.findMany({
+      where: {
+        attemptId,
+      },
+      include: {
+        choice: {
+          select: {
+            isCorrect: true,
+          },
+        },
+      },
+    });
+  }
+
+  countQuizQuestions(quizId: string): Promise<number> {
+    return this.prisma.question.count({
+      where: {
+        quizId,
+      },
+    });
+  }
+
+  submit(
+    id: string,
+    data: {
+      status: QuizAttemptStatus;
+      score: number;
+      correctAnswers: number;
+      totalQuestions: number;
+      submittedAt: Date;
+    },
+  ): Promise<QuizAttempt> {
+    return this.prisma.quizAttempt.update({
+      where: { id },
+      data,
+    });
+  }
+
+  findByStudentAndQuiz(
+    studentId: string,
+    quizId: string,
+  ): Promise<QuizAttempt[]> {
+    return this.prisma.quizAttempt.findMany({
+      where: {
+        studentId,
+        quizId,
+      },
+      orderBy: {
+        attemptNumber: 'desc',
+      },
+    });
+  }
+}

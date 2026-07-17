@@ -21,6 +21,7 @@ import { EnrollmentModule } from './enrollment/enrollment.module';
 import { CertificateModule } from './certificate/certificate.module';
 import { NotificationModule } from './notification/notification.module';
 import { ReviewModule } from './review/review.module';
+import { QuizAttemptModule } from './quiz-attempt/quiz-attempt.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ReviewModule } from './review/review.module';
     CertificateModule,
     NotificationModule,
     ReviewModule,
+    QuizAttemptModule,
   ],
   controllers: [AppController],
   providers: [AppService],
