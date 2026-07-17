@@ -95,7 +95,7 @@ export class SectionService {
 
     return this.sectionRepo.delete(id);
   }
-  private async findOrThrow(id: string) {
+  async findOrThrow(id: string) {
     const section = await this.sectionRepo.findById(id);
     if (!section) {
       throw new NotFoundException('Section not found');

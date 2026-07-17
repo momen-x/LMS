@@ -16,7 +16,7 @@ import { UserRole } from '@prisma/client';
 import { Roles } from 'src/auth/decorator/user-role.decorator';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
 
-@Controller('lesson')
+@Controller('lessons')
 export class LessonController {
   constructor(private readonly lessonService: LessonService) {}
 
@@ -24,8 +24,11 @@ export class LessonController {
   @ApiResponse({ status: 200, description: 'Lesson found successfully' })
   @ApiOperation({ summary: 'Get a lesson by id' })
   @UseGuards(JwtAuthGuard)
-  findOne(@Param('id') id: string) {
-    return this.lessonService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.lessonService.findOne(id, user.sub, user.role);
   }
 
   @Patch(':id')

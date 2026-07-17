@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { UserRole } from '@prisma/client';
@@ -17,12 +13,17 @@ export class LessonService {
   ) {}
 
   async create(
-    instructorId: string,
+    userId: string,
     role: UserRole,
     createLessonDto: CreateLessonDto,
     sectionId: string,
   ) {
-    await this.validateInstructorOwnership(instructorId, role, sectionId);
+    const section = await this.sectionService.findOrThrow(sectionId);
+    await this.sectionService.validateCourseManagementAccess(
+      userId,
+      role,
+      section.courseId,
+    );
     const maxOrder = await this.lessonRepo.getMaxOrder(sectionId);
     return this.lessonRepo.create(createLessonDto, sectionId, maxOrder);
   }
@@ -31,65 +32,53 @@ export class LessonService {
     return this.lessonRepo.find();
   }
 
-  findOne(id: string) {
-    return this.findOrThrow(id);
+  async findOne(id: string, userId: string, role: UserRole) {
+    const lesson = await this.findOrThrow(id);
+    await this.sectionService.validateCourseAccess(
+      userId,
+      role,
+      lesson.section.courseId,
+    );
+    return lesson;
   }
-  findBySectionId(sectionId: string) {
+  async findBySectionId(userId: string, role: UserRole, sectionId: string) {
+    const section = await this.sectionService.findOrThrow(sectionId);
+    await this.sectionService.validateCourseAccess(
+      userId,
+      role,
+      section.courseId,
+    );
     return this.lessonRepo.findBySectionId(sectionId);
   }
 
   async update(
     id: string,
-    instructorId: string,
+    userId: string,
     role: UserRole,
     updateLessonDto: UpdateLessonDto,
   ) {
     const lesson = await this.findOrThrow(id);
-    await this.validateInstructorOwnership(
-      instructorId,
+    await this.sectionService.validateCourseManagementAccess(
+      userId,
       role,
-      lesson.sectionId,
+      lesson.section.courseId,
     );
 
     return this.lessonRepo.update(id, updateLessonDto);
   }
-  async remove(id: string, instructorId: string, role: UserRole) {
+  async remove(id: string, userId: string, role: UserRole) {
     const lesson = await this.findOrThrow(id);
-    await this.validateInstructorOwnership(
-      instructorId,
+    await this.sectionService.validateCourseManagementAccess(
+      userId,
       role,
-      lesson.sectionId,
+      lesson.section.courseId,
     );
     return this.lessonRepo.remove(id);
   }
 
-  private async findOrThrow(id: string) {
+  async findOrThrow(id: string) {
     const lesson = await this.lessonRepo.findOne(id);
     if (!lesson) throw new NotFoundException('Lesson not found');
     return lesson;
   }
-  async validateInstructorOwnership(
-    instructorId: string,
-    role: UserRole,
-    sectionId: string,
-  ) {
-    if (role !== UserRole.instructor && role !== UserRole.admin)
-      throw new ForbiddenException(
-        'Only instructors and admins can perform this action',
-      );
-    if (role === UserRole.admin) return;
-    const section = await this.sectionService.findOne(sectionId, instructorId, role);
-    await this.sectionService.isAuthorized(
-      instructorId,
-      role,
-      section.courseId,
-    );
-  }
-  // async whoCanAccessIt(userId: string,role: UserRole, courseId: string) {
-  //   if(role === UserRole.admin) return;
-  //   if(role === UserRole.instructor){
-  //     const course = await this.sectionService.findOne(courseId);
-  //     if(course.instructorId === userId) return;
-  //   }
-  // }
 }

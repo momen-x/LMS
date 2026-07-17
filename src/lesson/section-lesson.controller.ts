@@ -42,8 +42,10 @@ export class SectionLessonController {
   @ApiResponse({ status: 200, description: 'Get lessons by section id' })
   @ApiOperation({ summary: 'Get lessons by section id' })
   @UseGuards(JwtAuthGuard)
-  findBySectionId(@Param('sectionId') sectionId: string) {
-    return this.lessonService.findBySectionId(sectionId);
+  findBySectionId(
+    @Param('sectionId') sectionId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.lessonService.findBySectionId(user.sub, user.role, sectionId);
   }
-  // @Patch(':id/order')
 }

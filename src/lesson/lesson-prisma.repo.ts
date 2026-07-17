@@ -5,6 +5,7 @@ import { PrismaService } from '../infrastructure/prisma/prisma.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { Prisma } from '@prisma/client';
+import { Section } from 'src/section/entities/section.entity';
 
 @Injectable()
 export class PrismaLessonRepository implements LessonRepository {
@@ -16,10 +17,13 @@ export class PrismaLessonRepository implements LessonRepository {
       },
     });
   }
-  findOne(id: string): Promise<Lesson | null> {
+  findOne(id: string): Promise<(Lesson & { section: Section }) | null> {
     return this.prismaService.lesson.findUnique({
       where: {
         id,
+      },
+      include: {
+        section: true,
       },
     });
   }

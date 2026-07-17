@@ -1,9 +1,10 @@
+import { Section } from 'src/section/entities/section.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CreateLessonInput, UpdateLessonInput } from './types/lesson.type';
 
 export abstract class LessonRepository {
   abstract find(): Promise<Lesson[]>;
-  abstract findOne(id: string): Promise<Lesson | null>;
+  abstract findOne(id: string): Promise<(Lesson & { section: Section }) | null>;
   abstract findBySectionId(sectionId: string): Promise<Lesson[]>;
   abstract create(
     dto: CreateLessonInput,
