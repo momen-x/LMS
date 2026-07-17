@@ -66,4 +66,22 @@ export class PrismaStudentAnswerRepository implements StudentAnswerRepository {
       },
     });
   }
+  upsert(studentId: string, dto: CreateStudentInputs): Promise<StudentAnswer> {
+    return this.prisma.studentAnswer.upsert({
+      where: {
+        studentId_questionId: {
+          studentId,
+          questionId: dto.questionId,
+        },
+      },
+      update: {
+        choiceId: dto.choiceId,
+      },
+      create: {
+        studentId,
+        questionId: dto.questionId,
+        choiceId: dto.choiceId,
+      },
+    });
+  }
 }

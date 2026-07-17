@@ -1,10 +1,13 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+
 import { StudentAnswerService } from './student-answer.service';
 import { CreateStudentAnswerDto } from './dto/create-student-answer.dto';
 import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
+import { RolesGuard } from 'src/auth/guard/user-guard.guard';
+import { Roles } from 'src/auth/decorator/user-role.decorator';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
-import { UserRole } from '@prisma/client';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('student-answers')
 export class StudentAnswerController {
@@ -16,9 +19,10 @@ export class StudentAnswerController {
     description: 'Student answer saved successfully',
   })
   @ApiOperation({
-    summary: 'Create or update student answer',
+    summary: 'Create or update the authenticated student answer',
   })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.student)
   saveAnswer(
     @Body() dto: CreateStudentAnswerDto,
     @AuthenticatedUser()
@@ -27,6 +31,6 @@ export class StudentAnswerController {
       role: UserRole;
     },
   ) {
-    return this.studentAnswerService.saveAnswer(user.sub, dto);
+    return this.studentAnswerService.saveAnswer(user.sub, user.role, dto);
   }
 }

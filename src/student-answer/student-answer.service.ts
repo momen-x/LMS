@@ -1,6 +1,13 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
+import { UserRole } from '@prisma/client';
+
 import { StudentAnswerRepository } from './student-answer.repo';
 import { ChoiceService } from 'src/choice/choice.service';
+import { QuestionService } from 'src/question/question.service';
 import { CreateStudentAnswerDto } from './dto/create-student-answer.dto';
 
 @Injectable()
@@ -8,30 +15,34 @@ export class StudentAnswerService {
   constructor(
     private readonly studentAnswerRepo: StudentAnswerRepository,
     private readonly choiceService: ChoiceService,
+    private readonly questionService: QuestionService,
   ) {}
 
-  async saveAnswer(studentId: string, dto: CreateStudentAnswerDto) {
-    const choice = await this.choiceService.findOne(dto.choiceId);
+  async saveAnswer(
+    studentId: string,
+    role: UserRole,
+    dto: CreateStudentAnswerDto,
+  ) {
+    if (role !== UserRole.student) {
+      throw new ForbiddenException('Only students can submit quiz answers');
+    }
 
-    if (choice.questionId !== dto.questionId) {
+    const question = await this.questionService.findOrThrow(dto.questionId);
+
+    await this.questionService.validateQuestionReadAccess(
+      studentId,
+      role,
+      question.quizId,
+    );
+
+    const choice = await this.choiceService.findOrThrow(dto.choiceId);
+
+    if (choice.questionId !== question.id) {
       throw new BadRequestException(
         'This choice does not belong to this question',
       );
     }
 
-    const existingAnswer =
-      await this.studentAnswerRepo.findByStudentAndQuestion(
-        studentId,
-        dto.questionId,
-      );
-
-    if (existingAnswer) {
-      return this.studentAnswerRepo.updateChoice(
-        existingAnswer.id,
-        dto.choiceId,
-      );
-    }
-
-    return this.studentAnswerRepo.create(studentId, dto);
+    return this.studentAnswerRepo.upsert(studentId, dto);
   }
 }

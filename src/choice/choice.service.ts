@@ -88,7 +88,7 @@ export class ChoiceService {
 
     return this.choiceRepo.delete(choice.id);
   }
-  private async findOrThrow(id: string) {
+  async findOrThrow(id: string) {
     const choice = await this.choiceRepo.findOne(id);
     if (!choice) throw new NotFoundException('Choice not found');
     return choice;

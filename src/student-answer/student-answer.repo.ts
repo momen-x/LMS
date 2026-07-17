@@ -19,4 +19,8 @@ export abstract class StudentAnswerRepository {
   abstract findByStudentId(studentId: string): Promise<StudentAnswer[]>;
 
   abstract findByQuestionId(questionId: string): Promise<StudentAnswer[]>;
+  abstract upsert(
+    studentId: string,
+    dto: CreateStudentInputs,
+  ): Promise<StudentAnswer>;
 }
