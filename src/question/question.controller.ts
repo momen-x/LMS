@@ -16,24 +16,28 @@ import { UserRole } from '@prisma/client';
 import { Roles } from 'src/auth/decorator/user-role.decorator';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
 
-@Controller('question')
+@Controller('questions')
 export class QuestionController {
   constructor(private readonly questionService: QuestionService) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all questions' })
   @ApiResponse({ status: 200, description: 'Get all questions' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.admin)
   findAll() {
     return this.questionService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get all questions' })
-  @ApiResponse({ status: 200, description: 'Get all questions' })
+  @ApiOperation({ summary: 'Get  question by its id' })
+  @ApiResponse({ status: 200, description: 'Get single question by id' })
   @UseGuards(JwtAuthGuard)
-  findOne(@Param('id') id: string) {
-    return this.questionService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.questionService.findOne(id, user.sub, user.role);
   }
 
   @Patch(':id')

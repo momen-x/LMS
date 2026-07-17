@@ -75,7 +75,7 @@ export class QuizService {
     return quiz;
   }
 
-  private async validateQuizManagementAccess(
+  async validateQuizManagementAccess(
     userId: string,
     role: UserRole,
     lessonId: string,
@@ -89,7 +89,7 @@ export class QuizService {
     );
   }
 
-  private async validateQuizReadAccessByLesson(
+  async validateQuizReadAccessByLesson(
     userId: string,
     role: UserRole,
     lessonId: string,

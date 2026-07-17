@@ -30,10 +30,13 @@ export class QuizQuestionsController {
     );
   }
   @Get()
-  @ApiResponse({ status: 200, description: 'Get all questions' })
-  @ApiOperation({ summary: 'get all questions' })
+  @ApiResponse({ status: 200, description: 'Get all questions by quiz id' })
+  @ApiOperation({ summary: 'get all questions by quiz id' })
   @UseGuards(JwtAuthGuard)
-  findByQuizId(@Param('quizId') quizId: string) {
-    return this.questionService.findByQuizId(quizId);
+  findByQuizId(
+    @Param('quizId') quizId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.questionService.findByQuizId(user.sub, user.role, quizId);
   }
 }
