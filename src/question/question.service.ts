@@ -67,7 +67,7 @@ export class QuestionService {
     return this.questionRepository.delete(id);
   }
 
-  private async findOrThrow(id: string) {
+  async findOrThrow(id: string) {
     const question = await this.questionRepository.findOne(id);
 
     if (!question) {
@@ -77,7 +77,7 @@ export class QuestionService {
     return question;
   }
 
-  private async validateQuestionManagementAccess(
+  async validateQuestionManagementAccess(
     userId: string,
     role: UserRole,
     quizId: string,
@@ -97,7 +97,7 @@ export class QuestionService {
     );
   }
 
-  private async validateQuestionReadAccess(
+  async validateQuestionReadAccess(
     userId: string,
     role: UserRole,
     quizId: string,

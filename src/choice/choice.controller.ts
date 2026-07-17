@@ -16,7 +16,7 @@ import { UserRole } from '@prisma/client';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 
-@Controller('choice')
+@Controller('choices')
 export class ChoiceController {
   constructor(private readonly choiceService: ChoiceService) {}
 
@@ -24,7 +24,7 @@ export class ChoiceController {
   @ApiResponse({ status: 200, description: 'get all choice questions' })
   @ApiOperation({ summary: 'get all choice questions' })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.instructor, UserRole.admin)
+  @Roles(UserRole.admin)
   findAll() {
     return this.choiceService.findAll();
   }
@@ -33,8 +33,11 @@ export class ChoiceController {
   @ApiResponse({ status: 200, description: 'get choice question by id' })
   @ApiOperation({ summary: 'get choice question by id' })
   @UseGuards(JwtAuthGuard)
-  findOne(@Param('id') id: string) {
-    return this.choiceService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.choiceService.findOne(id, user.sub, user.role);
   }
 
   @Patch(':id')

@@ -7,8 +7,3 @@ export class Question {
     public updatedAt: Date,
   ) {}
 }
-//   id        String   @id @default(cuid())
-//   quizId    String
-//   text      String
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
