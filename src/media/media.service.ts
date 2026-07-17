@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,86 +9,114 @@ import { LessonService } from 'src/lesson/lesson.service';
 import { MediaRepository } from './media.repo';
 import { UserRole } from '@prisma/client';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { SectionService } from 'src/section/section.service';
 
 @Injectable()
 export class MediaService {
   constructor(
     private readonly lessonService: LessonService,
+    private readonly sectionService: SectionService,
     private readonly mediaRepo: MediaRepository,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
   async create(
-    instructorId: string,
+    userId: string,
     role: UserRole,
     createMediaDto: CreateMediaDto,
     lessonId: string,
     file: Express.Multer.File,
   ) {
-    await this.validateInstructorOwnership(instructorId, role, lessonId);
+    await this.validateMediaManagementAccess(userId, role, lessonId);
 
     if (!file) {
       throw new BadRequestException('Media file is required');
     }
-    const uploadedImage = await this.cloudinaryService.uploadFile(
+
+    const uploadedMedia = await this.cloudinaryService.uploadFile(
       file,
       'media',
     );
-    const mediaUrl = uploadedImage.url;
-    const mediaPublicId = uploadedImage.publicId;
 
-    return this.mediaRepo.create(
-      createMediaDto,
-      lessonId,
-      mediaUrl,
-      mediaPublicId,
-    );
+    try {
+      return await this.mediaRepo.create(
+        createMediaDto,
+        lessonId,
+        uploadedMedia.url,
+        uploadedMedia.publicId,
+      );
+    } catch (error) {
+      await this.cloudinaryService.deleteFile(uploadedMedia.publicId);
+
+      throw error;
+    }
   }
 
   findAll() {
     return this.mediaRepo.findAll();
   }
 
-  findOne(id: string) {
-    return this.findOrThrow(id);
+  async findOne(id: string, userId: string, role: UserRole) {
+    const media = await this.findOrThrow(id);
+    await this.validateMediaReadAccess(userId, role, media.lessonId);
+    return media;
   }
-  findByLessonId(lessonId: string) {
+  async findByLessonId(userId: string, role: UserRole, lessonId: string) {
+    await this.validateMediaReadAccess(userId, role, lessonId);
     return this.mediaRepo.findByLessonId(lessonId);
   }
 
   async update(
     id: string,
-    instructorId: string,
+    userId: string,
     role: UserRole,
     updateMediaDto: UpdateMediaDto,
     file?: Express.Multer.File,
   ) {
     const media = await this.findOrThrow(id);
-    await this.validateInstructorOwnership(instructorId, role, media.lessonId);
-    let mediaUrl: string | null = null;
-    let mediaPublicId: string | null = null;
-    if (file) {
+
+    await this.validateMediaManagementAccess(userId, role, media.lessonId);
+
+    if (!file) {
+      return this.mediaRepo.update(id, updateMediaDto);
+    }
+
+    const uploadedMedia = await this.cloudinaryService.uploadFile(
+      file,
+      'media',
+    );
+
+    try {
+      const updatedMedia = await this.mediaRepo.update(
+        id,
+        updateMediaDto,
+        uploadedMedia.url,
+        uploadedMedia.publicId,
+      );
+
       if (media.urlPublicId) {
         await this.cloudinaryService.deleteFile(media.urlPublicId);
       }
-      const uploadedImage = await this.cloudinaryService.uploadFile(
-        file,
-        'media',
-      );
-      mediaUrl = uploadedImage.url;
-      mediaPublicId = uploadedImage.publicId;
-    }
-    if (mediaPublicId && mediaUrl)
-      return this.mediaRepo.update(id, updateMediaDto, mediaUrl, mediaPublicId);
 
-    return this.mediaRepo.update(id, updateMediaDto);
+      return updatedMedia;
+    } catch (error) {
+      await this.cloudinaryService.deleteFile(uploadedMedia.publicId);
+
+      throw error;
+    }
   }
 
-  async remove(id: string, instructorId: string, role: UserRole) {
+  async remove(id: string, userId: string, role: UserRole) {
     const media = await this.findOrThrow(id);
-    await this.validateInstructorOwnership(instructorId, role, media.lessonId);
-    if (media.urlPublicId)
+
+    await this.validateMediaManagementAccess(userId, role, media.lessonId);
+
+    const deletedMedia = await this.mediaRepo.remove(id);
+
+    if (media.urlPublicId) {
       await this.cloudinaryService.deleteFile(media.urlPublicId);
-    return this.mediaRepo.remove(id);
+    }
+
+    return deletedMedia;
   }
   private async findOrThrow(id: string) {
     const media = await this.mediaRepo.findOne(id);
@@ -98,21 +125,29 @@ export class MediaService {
     }
     return media;
   }
-  async validateInstructorOwnership(
-    instructorId: string,
+  async validateMediaManagementAccess(
+    userId: string,
     role: UserRole,
     lessonId: string,
   ) {
-    if (role !== UserRole.instructor && role !== UserRole.admin)
-      throw new ForbiddenException(
-        'Only instructors and admins can perform this action',
-      );
-    if (role === UserRole.admin) return;
-    const lesson = await this.lessonService.findOne(lessonId);
-    await this.lessonService.validateInstructorOwnership(
-      instructorId,
+    const lesson = await this.lessonService.findOrThrow(lessonId);
+
+    await this.sectionService.validateCourseManagementAccess(
+      userId,
       role,
-      lesson.sectionId,
+      lesson.section.courseId,
+    );
+  }
+  async validateMediaReadAccess(
+    userId: string,
+    role: UserRole,
+    lessonId: string,
+  ) {
+    const lesson = await this.lessonService.findOrThrow(lessonId);
+    await this.sectionService.validateCourseAccess(
+      userId,
+      role,
+      lesson.section.courseId,
     );
   }
 }

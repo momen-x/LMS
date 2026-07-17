@@ -3,6 +3,7 @@ import { MediaRepository } from './media.repo';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { Media } from './entities/media.entity';
 import { CreateMediaInputs, UpdateMediaInputs } from './types/media.type';
+import { Lesson } from 'src/lesson/entities/lesson.entity';
 
 @Injectable()
 export class PrismaMediaRepository implements MediaRepository {
@@ -25,11 +26,12 @@ export class PrismaMediaRepository implements MediaRepository {
   findAll(): Promise<Media[]> {
     return this.prisma.media.findMany();
   }
-  findOne(id: string): Promise<Media | null> {
+  findOne(id: string): Promise<(Media & { lesson: Lesson }) | null> {
     return this.prisma.media.findUnique({
       where: {
         id,
       },
+      include: { lesson: true },
     });
   }
   findByLessonId(lessonId: string): Promise<Media[]> {

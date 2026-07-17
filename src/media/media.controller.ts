@@ -48,8 +48,7 @@ export class MediaController {
     @Param('id') id: string,
     @AuthenticatedUser() user: { sub: string; role: UserRole },
   ) {
-    //in the future just the user payment can show and go to the media
-    return this.mediaService.findOne(id);
+    return this.mediaService.findOne(id, user.sub, user.role);
   }
 
   @Patch(':id')

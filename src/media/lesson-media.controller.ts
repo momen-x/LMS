@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Body,
   Controller,
@@ -9,13 +8,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { MediaService } from './media.service'; // Import Post and UseGuards
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiOperation,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { MediaService } from './media.service';
+import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { Roles } from 'src/auth/decorator/user-role.decorator';
@@ -30,9 +24,13 @@ export class LessonMediaController {
   constructor(private readonly mediaService: MediaService) {}
 
   @Post()
-  @ApiResponse({ status: 201, description: 'Media Created successfully' })
-  @ApiOperation({ summary: 'Create new media' })
-  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 201,
+    description: 'Media Created successfully',
+  })
+  @ApiOperation({
+    summary: 'Create new media',
+  })
   @ApiBody({
     schema: {
       type: 'object',
@@ -67,14 +65,18 @@ export class LessonMediaController {
     return this.mediaService.create(user.sub, user.role, dto, lessonId, file);
   }
   @Get()
-  @ApiResponse({ status: 201, description: 'Media Created successfully' })
-  @ApiOperation({ summary: 'Create new media' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lesson media retrieved successfully',
+  })
+  @ApiOperation({
+    summary: 'Get media by lesson ID',
+  })
   @UseGuards(JwtAuthGuard)
   findByLessonId(
     @Param('lessonId') lessonId: string,
     @AuthenticatedUser() user: { sub: string; role: UserRole },
   ) {
-    //in the future just the payment user can use this route
-    return this.mediaService.findByLessonId(lessonId);
+    return this.mediaService.findByLessonId(user.sub, user.role, lessonId);
   }
 }
