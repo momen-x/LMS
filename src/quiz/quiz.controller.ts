@@ -16,12 +16,12 @@ import { Roles } from 'src/auth/decorator/user-role.decorator';
 import { UserRole } from '@prisma/client';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
 
-@Controller('quiz')
+@Controller('quizzes')
 export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
   @Get()
-  @ApiResponse({ status: 200, description: 'get all questions' })
+  @ApiResponse({ status: 200, description: 'get all quizzes' })
   @ApiOperation({ summary: 'get all questions' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.admin)
@@ -30,11 +30,14 @@ export class QuizController {
   }
 
   @Get(':id')
-  @ApiResponse({ status: 200, description: 'get one question' })
-  @ApiOperation({ summary: 'get one question' })
+  @ApiResponse({ status: 200, description: 'get single quiz by id' })
+  @ApiOperation({ summary: 'get one quiz' })
   @UseGuards(JwtAuthGuard)
-  findOne(@Param('id') id: string) {
-    return this.quizService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.quizService.findOne(id, user.sub, user.role);
   }
 
   @Patch(':id')

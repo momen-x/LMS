@@ -6,6 +6,7 @@ import { MediaRepository } from './media.repo';
 import { PrismaMediaRepository } from './media-prisma.repo';
 import { LessonMediaController } from './lesson-media.controller';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { SectionModule } from 'src/section/section.module';
 
 @Module({
   controllers: [MediaController, LessonMediaController],
@@ -14,6 +15,6 @@ import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
     CloudinaryService,
     { provide: MediaRepository, useClass: PrismaMediaRepository },
   ],
-  imports: [LessonModule],
+  imports: [LessonModule, SectionModule],
 })
 export class MediaModule {}

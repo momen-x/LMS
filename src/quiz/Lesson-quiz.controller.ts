@@ -32,12 +32,14 @@ export class LessonQuizController {
   @Get()
   @ApiResponse({
     status: 200,
-    description: 'get all questions for this lesson',
+    description: 'get all quizzes by the lesson id',
   })
-  @ApiOperation({ summary: 'get all lesson questions' })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  //   @Roles(UserRole.admin)
-  findByLessonId(@Param('lessonId') lessonId: string) {
-    return this.quizService.findByLessonId(lessonId);
+  @ApiOperation({ summary: 'get all quizzes by the lesson id' })
+  @UseGuards(JwtAuthGuard)
+  findByLessonId(
+    @Param('lessonId') lessonId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.quizService.findByLessonId(user.sub, user.role, lessonId);
   }
 }
