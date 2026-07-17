@@ -12,9 +12,9 @@ import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorat
 export class CourseSectionController {
   constructor(private readonly sectionService: SectionService) {}
   @Post()
-  @ApiResponse({ status: 201, description: 'Service created successfully' })
-  @ApiOperation({ summary: 'Create a new service' })
-  @Roles(UserRole.instructor, UserRole.admin)
+  @ApiResponse({ status: 201, description: 'Section created successfully' })
+  @ApiOperation({ summary: 'Create a new Section' })
+  @Roles(UserRole.admin, UserRole.instructor)
   @UseGuards(JwtAuthGuard, RolesGuard)
   create(
     @Body() createSectionDto: CreateSectionDto,
@@ -29,9 +29,13 @@ export class CourseSectionController {
     );
   }
   @Get()
+  @UseGuards(JwtAuthGuard)
   @ApiResponse({ status: 200, description: 'get section by course id' })
   @ApiOperation({ summary: 'get single section' })
-  findByCourseId(@Param('courseId') courseId: string) {
-    return this.sectionService.findByCourseId(courseId);
+  findByCourseId(
+    @Param('courseId') courseId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.sectionService.findByCourseId(user.sub, user.role, courseId);
   }
 }

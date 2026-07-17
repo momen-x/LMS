@@ -78,11 +78,18 @@ export class LessonService {
         'Only instructors and admins can perform this action',
       );
     if (role === UserRole.admin) return;
-    const section = await this.sectionService.findOne(sectionId);
+    const section = await this.sectionService.findOne(sectionId, instructorId, role);
     await this.sectionService.isAuthorized(
       instructorId,
       role,
       section.courseId,
     );
   }
+  // async whoCanAccessIt(userId: string,role: UserRole, courseId: string) {
+  //   if(role === UserRole.admin) return;
+  //   if(role === UserRole.instructor){
+  //     const course = await this.sectionService.findOne(courseId);
+  //     if(course.instructorId === userId) return;
+  //   }
+  // }
 }

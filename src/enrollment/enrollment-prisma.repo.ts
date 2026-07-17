@@ -12,6 +12,7 @@ import { EnrollmentRepository } from './enrollment.repo';
 @Injectable()
 export class PrismaEnrollmentRepository implements EnrollmentRepository {
   constructor(private readonly prisma: PrismaService) {}
+
   updateProgress(
     id: string,
     data: UpdateEnrollmentProgressDto,

@@ -9,11 +9,13 @@ import { UpdateSectionDto } from './dto/update-section.dto';
 import { SectionRepository } from './section.repo';
 import { UserRole } from '@prisma/client';
 import { CourseService } from 'src/course/course.service';
+import { EnrollmentService } from 'src/enrollment/enrollment.service';
 
 @Injectable()
 export class SectionService {
   constructor(
     private readonly sectionRepo: SectionRepository,
+    private readonly enrollmentService: EnrollmentService,
     private readonly courseService: CourseService,
   ) {}
 
@@ -23,7 +25,7 @@ export class SectionService {
     createSectionDto: CreateSectionDto,
     courseId: string,
   ) {
-    await this.isAuthorized(instructorId, role, courseId);
+    await this.validateCourseManagementAccess(instructorId, role, courseId);
     const existingSection = await this.sectionRepo.findByCourseAndOrder(
       courseId,
       createSectionDto.order,
@@ -37,14 +39,17 @@ export class SectionService {
     return this.sectionRepo.create(createSectionDto, courseId);
   }
 
-  findAll() {
+  async findAll() {
     return this.sectionRepo.find();
   }
 
-  findOne(id: string) {
-    return this.findOrThrow(id);
+  async findOne(id: string, userId: string, role: UserRole) {
+    const section = await this.findOrThrow(id);
+    await this.validateCourseAccess(userId, role, section.courseId);
+    return section;
   }
-  findByCourseId(courseId: string) {
+  async findByCourseId(userId: string, role: UserRole, courseId: string) {
+    await this.validateCourseAccess(userId, role, courseId);
     return this.sectionRepo.findByCourseId(courseId);
   }
 
@@ -55,7 +60,11 @@ export class SectionService {
     updateSectionDto: UpdateSectionDto,
   ) {
     const section = await this.findOrThrow(id);
-    await this.isAuthorized(instructorId, role, section.courseId);
+    await this.validateCourseManagementAccess(
+      instructorId,
+      role,
+      section.courseId,
+    );
 
     if (
       updateSectionDto.order !== undefined &&
@@ -78,7 +87,11 @@ export class SectionService {
 
   async remove(id: string, instructorId: string, role: UserRole) {
     const section = await this.findOrThrow(id);
-    await this.isAuthorized(instructorId, role, section.courseId);
+    await this.validateCourseManagementAccess(
+      instructorId,
+      role,
+      section.courseId,
+    );
 
     return this.sectionRepo.delete(id);
   }
@@ -89,16 +102,55 @@ export class SectionService {
     }
     return section;
   }
-
-  async isAuthorized(instructorId: string, role: UserRole, courseId: string) {
-    if (role !== UserRole.instructor && role !== UserRole.admin)
-      throw new ForbiddenException(
-        'Only instructors and admins can perform this action',
-      );
-    if (role === UserRole.admin) return true;
+  async validateCourseManagementAccess(
+    userId: string,
+    role: UserRole,
+    courseId: string,
+  ) {
     const course = await this.courseService.findOne(courseId);
-    if (course.instructorId !== instructorId)
-      throw new ForbiddenException('You are not the owner of this course');
-    return true;
+
+    if (role === UserRole.admin) {
+      return;
+    }
+
+    if (role === UserRole.instructor && course.instructorId === userId) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'Only the course owner or an admin can perform this action',
+    );
+  }
+  async validateCourseAccess(userId: string, role: UserRole, courseId: string) {
+    const course = await this.courseService.findOne(courseId);
+
+    if (role === UserRole.admin) {
+      return;
+    }
+
+    if (role === UserRole.instructor) {
+      if (course.instructorId === userId) {
+        return;
+      }
+
+      throw new ForbiddenException(
+        'Only the course owner can access this course content',
+      );
+    }
+
+    if (role === UserRole.student) {
+      const isEnrolled = await this.enrollmentService.isEnrolled(
+        userId,
+        courseId,
+      );
+
+      if (isEnrolled) {
+        return;
+      }
+
+      throw new ForbiddenException('You are not enrolled in this course');
+    }
+
+    throw new ForbiddenException('You do not have access to this course');
   }
 }

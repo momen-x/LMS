@@ -63,6 +63,15 @@ export class EnrollmentService {
     await this.findOrThrow(id);
     return this.enrollmentRepository.updateProgress(id, updateEnrollmentDto);
   }
+  // async findByUserAndCourse(studentId: string, courseId: string) {
+  //   const enrollment =
+  //     await this.enrollmentRepository.findByStudentIdAndCourseId(
+  //       studentId,
+  //       courseId,
+  //     );
+  //   if (!enrollment) throw new NotFoundException('Enrollment not found');
+  //   return enrollment;
+  // }
 
   async markCompleted(id: string) {
     await this.findOrThrow(id);
@@ -125,16 +134,20 @@ export class EnrollmentService {
   }
 
   async validateInstructorOwnerEnrollment(
-    actorId: string,
+    userId: string,
     role: UserRole,
     enrollmentId: string,
   ) {
     const enrollment = await this.findOrThrow(enrollmentId);
-    await this.validateInstructorOwnerCourse(
-      actorId,
-      role,
-      enrollment.courseId,
-    );
+    await this.validateInstructorOwnerCourse(userId, role, enrollment.courseId);
     return enrollment;
+  }
+  async isEnrolled(studentId: string, courseId: string): Promise<boolean> {
+    const enrollment = await this.enrollmentRepository.findByStudentAndCourse(
+      studentId,
+      courseId,
+    );
+
+    return Boolean(enrollment);
   }
 }

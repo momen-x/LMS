@@ -4,6 +4,7 @@ import { SectionController } from './section.controller';
 import { PrismaSectionRepository } from './section-prisma.repo';
 import { SectionRepository } from './section.repo';
 import { CourseModule } from 'src/course/course.module';
+import { EnrollmentModule } from 'src/enrollment/enrollment.module';
 
 @Module({
   controllers: [SectionController],
@@ -11,7 +12,7 @@ import { CourseModule } from 'src/course/course.module';
     SectionService,
     { provide: SectionRepository, useClass: PrismaSectionRepository },
   ],
-  imports: [CourseModule],
+  imports: [CourseModule, EnrollmentModule],
   exports: [SectionService],
 })
 export class SectionModule {}

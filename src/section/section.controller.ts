@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Post,
   Body,
   Patch,
   Param,
@@ -9,7 +8,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { SectionService } from './section.service';
-import { CreateSectionDto } from './dto/create-section.dto';
 import { UpdateSectionDto } from './dto/update-section.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from 'src/auth/decorator/user-role.decorator';
@@ -18,41 +16,28 @@ import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
 
-@Controller('section')
+@Controller('sections')
 export class SectionController {
   constructor(private readonly sectionService: SectionService) {}
-
-  @Post('course/:courseId')
-  @ApiResponse({ status: 201, description: 'Service created successfully' })
-  @ApiOperation({ summary: 'Create a new service' })
-  @Roles(UserRole.instructor)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  create(
-    @Body() createSectionDto: CreateSectionDto,
-    @AuthenticatedUser() user: { sub: string; role: UserRole },
-    @Param('courseId') courseId: string,
-  ) {
-    return this.sectionService.create(
-      user.sub,
-      user.role,
-      createSectionDto,
-      courseId,
-    );
-  }
 
   @Get()
   @ApiResponse({ status: 200, description: 'get all sections' })
   @ApiOperation({ summary: 'Get all sections' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.admin)
   findAll() {
     return this.sectionService.findAll();
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   @ApiResponse({ status: 200, description: 'get section by id' })
   @ApiOperation({ summary: 'get single section' })
-  findOne(@Param('id') id: string) {
-    return this.sectionService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.sectionService.findOne(id, user.sub, user.role);
   }
 
   @Patch(':id')
