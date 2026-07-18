@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   ForbiddenException,
@@ -23,19 +21,19 @@ export class QuizAttemptService {
     private readonly choiceService: ChoiceService,
   ) {}
 
-  async startAttempt(studentId: string, role: UserRole, quizId: string) {
+  async startAttempt(userId: string, role: UserRole, quizId: string) {
     this.validateStudentRole(role);
 
     const quiz = await this.quizService.findOrThrow(quizId);
 
     await this.quizService.validateQuizReadAccessByLesson(
-      studentId,
+      userId,
       role,
       quiz.lessonId,
     );
 
     const activeAttempt = await this.quizAttemptRepo.findActiveAttempt(
-      studentId,
+      userId,
       quizId,
     );
 
@@ -44,7 +42,7 @@ export class QuizAttemptService {
     }
 
     const attemptsCount = await this.quizAttemptRepo.countStudentAttempts(
-      studentId,
+      userId,
       quizId,
     );
 
@@ -54,12 +52,12 @@ export class QuizAttemptService {
       );
     }
 
-    return this.quizAttemptRepo.create(studentId, quizId, attemptsCount + 1);
+    return this.quizAttemptRepo.create(userId, quizId, attemptsCount + 1);
   }
 
   async saveAnswer(
     attemptId: string,
-    studentId: string,
+    userId: string,
     role: UserRole,
     dto: SaveAttemptAnswerDto,
   ) {
@@ -67,7 +65,7 @@ export class QuizAttemptService {
 
     const attempt = await this.findOrThrow(attemptId);
 
-    this.validateAttemptOwnership(attempt.studentId, studentId);
+    this.validateAttemptOwnership(attempt.studentId, userId);
 
     this.validateAttemptIsActive(attempt.status);
 
@@ -90,12 +88,12 @@ export class QuizAttemptService {
     return this.quizAttemptRepo.saveAnswer(attempt.id, question.id, choice.id);
   }
 
-  async submitAttempt(attemptId: string, studentId: string, role: UserRole) {
+  async submitAttempt(attemptId: string, userId: string, role: UserRole) {
     this.validateStudentRole(role);
 
     const attempt = await this.findOrThrow(attemptId);
 
-    this.validateAttemptOwnership(attempt.studentId, studentId);
+    this.validateAttemptOwnership(attempt.studentId, userId);
 
     this.validateAttemptIsActive(attempt.status);
 
@@ -124,10 +122,10 @@ export class QuizAttemptService {
     });
   }
 
-  async findMyAttempts(studentId: string, role: UserRole, quizId: string) {
+  async findMyAttempts(userId: string, role: UserRole, quizId: string) {
     this.validateStudentRole(role);
 
-    return this.quizAttemptRepo.findByStudentAndQuiz(studentId, quizId);
+    return this.quizAttemptRepo.findByStudentAndQuiz(userId, quizId);
   }
 
   async findOrThrow(id: string) {
@@ -146,11 +144,8 @@ export class QuizAttemptService {
     }
   }
 
-  private validateAttemptOwnership(
-    attemptStudentId: string,
-    studentId: string,
-  ) {
-    if (attemptStudentId !== studentId) {
+  private validateAttemptOwnership(attemptUserId: string, userId: string) {
+    if (attemptUserId !== userId) {
       throw new ForbiddenException(
         'You do not have access to this quiz attempt',
       );
@@ -158,7 +153,7 @@ export class QuizAttemptService {
   }
 
   private validateAttemptIsActive(status: QuizAttemptStatus) {
-    if (status !== 'in_progress') {
+    if (status !== QuizAttemptStatus.in_progress) {
       throw new BadRequestException(
         'This quiz attempt has already been submitted',
       );

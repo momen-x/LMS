@@ -1,6 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateQuizDto {
   @ApiProperty()
@@ -9,4 +16,12 @@ export class CreateQuizDto {
   @IsString()
   @IsNotEmpty()
   title!: string;
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  passingScore?: number;
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  maxAttempts?: number;
 }
