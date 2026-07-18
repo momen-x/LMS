@@ -12,6 +12,7 @@ import { QuizService } from './quiz.service';
 export class LessonQuizController {
   constructor(private readonly quizService: QuizService) {}
 
+  
   @Post()
   @ApiResponse({ status: 201, description: 'Quiz created successfully' })
   @ApiOperation({ summary: 'Create a new quiz' })
