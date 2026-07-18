@@ -16,6 +16,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
       clientID: configService.getOrThrow<string>('GITHUB_CLIENT_ID'),
       clientSecret: configService.getOrThrow<string>('GITHUB_CLIENT_SECRET'),
       callbackURL: configService.getOrThrow<string>('GITHUB_CALLBACK_URL'),
+      allRawEmails: true,
       scope: ['user:email'], // ← correct GitHub scope
     });
   }
@@ -27,7 +28,16 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     done: (error: Error | null, user?: Express.User | false) => void,
   ): Promise<void> {
     try {
-      const email = profile.emails?.[0]?.value;
+      const emails:
+        | Array<{
+            value: string;
+            verified?: boolean;
+            primary?: boolean;
+          }>
+        | undefined = profile.emails;
+      const email = emails?.find(
+        (entry) => entry.verified === true && entry.primary !== false,
+      )?.value;
       const avatar = profile.photos?.[0]?.value ?? null;
 
       if (!email) {
@@ -39,6 +49,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
       const githubProfile: ProviderUserProfile = {
         providerId: profile.id,
         email: email.trim().toLowerCase(),
+        emailVerified: true,
         name: profile.displayName || email.split('@')[0],
         avatar,
         provider: AuthProvider.github,

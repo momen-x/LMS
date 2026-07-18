@@ -38,28 +38,25 @@ export class AuthService {
     // private notificationRepo: NotificationsRepository,
   ) {}
   async register(createAuthDto: RegisterUserDto) {
-    const email = createAuthDto.email.toLowerCase();
-    const user = await this.authRepo.findByEmail(email);
-    if (user && (!user.isVerified || !user.emailVerificationExpires)) {
-      throw new BadRequestException(
-        'Verification token has expired, please resend verification email',
-      );
+    const email = createAuthDto.email.trim().toLowerCase();
+
+    const existingUser = await this.authRepo.findByEmail(email);
+
+    if (existingUser) {
+      throw new ConflictException('User with this email already exists');
     }
-    if (user) {
-      throw new BadRequestException('User with this email already exists');
-    }
-    if (!createAuthDto.password) {
-      throw new BadRequestException('Password is required');
-    }
+
     const hashedPassword = await bcrypt.hash(createAuthDto.password, 12);
+
     const newUser = await this.authRepo.create({
-      ...createAuthDto,
-      password: hashedPassword,
+      name: createAuthDto.name.trim(),
       email,
+      password: hashedPassword,
     });
+
     const { token, tokenHash } = this.generateEmailVerificationToken();
 
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 15);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     await this.authRepo.saveEmailVerificationToken(
       newUser.id,
@@ -69,7 +66,7 @@ export class AuthService {
 
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
 
-    const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
+    const verificationUrl = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
 
     await this.mailService.sendVerificationEmail(
       newUser.email,
@@ -77,7 +74,10 @@ export class AuthService {
       verificationUrl,
     );
 
-    return { success: true, message: 'Verification email sent' };
+    return {
+      success: true,
+      message: 'Verification email sent',
+    };
   }
 
   async login(
@@ -85,7 +85,8 @@ export class AuthService {
     res: express.Response,
     { userAgent, ipAddress }: { userAgent: string; ipAddress: string },
   ) {
-    const user = await this.authRepo.findByEmail(loginDto.email);
+    const email = loginDto.email.trim().toLowerCase();
+    const user = await this.authRepo.findByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
@@ -241,16 +242,24 @@ export class AuthService {
       ...metadata,
       expiresAt: new Date(Date.now() + REFRESH_TOKEN_MAX_AGE),
     });
-    const { access_token: accessToken } = this.createToken(
-      user.id,
-      user.email,
-      user.role,
-      user.provider,
-    );
-    const refreshToken = this.createRefreshToken(user.id, session.id);
-    const tokenHash = await bcrypt.hash(refreshToken, 12);
-    await this.authRepo.updateRefreshTokenSessionHash(session.id, tokenHash);
-    return { accessToken, refreshToken };
+
+    try {
+      const { access_token: accessToken } = this.createToken(
+        user.id,
+        user.email,
+        user.role,
+        user.provider,
+      );
+      const refreshToken = this.createRefreshToken(user.id, session.id);
+      const tokenHash = await bcrypt.hash(refreshToken, 12);
+      await this.authRepo.updateRefreshTokenSessionHash(session.id, tokenHash);
+      return { accessToken, refreshToken };
+    } catch (error) {
+      await this.authRepo
+        .revokeRefreshTokenSession(session.id)
+        .catch(() => undefined);
+      throw error;
+    }
   }
   async logout(
     refreshToken: string | undefined,
@@ -400,7 +409,7 @@ export class AuthService {
       avatar: profile.avatar,
       provider: AuthProvider.google,
       providerId: profile.providerId,
-      isVerified: true,
+      isVerified: profile.emailVerified,
     });
   }
   async validateGithubUser(profile: ProviderUserProfile) {
@@ -429,7 +438,7 @@ export class AuthService {
       avatar: profile.avatar,
       provider: AuthProvider.github,
       providerId: profile.providerId,
-      isVerified: true,
+      isVerified: profile.emailVerified,
     });
   }
   async completeOAuthLogin(

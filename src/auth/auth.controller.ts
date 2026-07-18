@@ -15,7 +15,7 @@ import { RegisterUserDto } from './dto/register-auth.dto';
 import { LoginUserDto } from './dto/login-auth.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import * as express from 'express';
-// import { generateCsrfToken } from 'csrf-csrf';
+import { CsrfService } from 'src/common/security/csrf/csrf.service';
 import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { GoogleAuthGuard } from './guard/google-auth.guard';
@@ -28,6 +28,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly csrfService: CsrfService,
   ) {}
 
   @Post('register')
@@ -69,11 +70,10 @@ export class AuthController {
   @ApiOperation({ summary: 'reset password' })
   async resetPasswordWithToken(
     @Query('token') token: string,
-    @Query('email') email: string,
     @Body() dto: ResetPasswordDto,
   ) {
     await this.authService.resetPasswordWithToken(token, dto.password);
-    return { success: 'true' };
+    return { success: true };
   }
 
   @HttpCode(HttpStatus.OK)
@@ -92,19 +92,21 @@ export class AuthController {
     return this.authService.verifyEmail(token);
   }
 
-  @Get('/google')
+  @Get('google')
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Login with Google' })
-  googleLogin() {
-    return 'hello world';
+  googleLogin(): void {
+    // Passport handles the redirect.
   }
+
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   async googleLoginCallback(
     @Req() req: express.Request,
-    @Res({ passthrough: true }) res: express.Response,
-  ) {
+    @Res() res: express.Response,
+  ): Promise<void> {
     const user = req.user as User;
+
     await this.authService.completeOAuthLogin(user, res, {
       userAgent: req.headers['user-agent'] ?? 'unknown',
       ipAddress: req.ip ?? 'unknown',
@@ -113,22 +115,25 @@ export class AuthController {
     const frontendUrl = this.configService.getOrThrow<string>(
       'FRONTEND_OAUTH_SUCCESS_URL',
     );
-    return res.redirect(frontendUrl);
+
+    res.redirect(frontendUrl);
   }
+
   @Get('github')
   @UseGuards(GithubAuthGuard)
-  @ApiOperation({ summary: 'Login with Github' })
-  githubLogin() {
-    return 'hello world';
-    // This route will redirect to Github for authentication
+  @ApiOperation({ summary: 'Login with GitHub' })
+  githubLogin(): void {
+    // Passport handles the redirect.
   }
+
   @Get('github/callback')
   @UseGuards(GithubAuthGuard)
   async githubLoginCallback(
     @Req() req: express.Request,
-    @Res({ passthrough: true }) res: express.Response,
-  ) {
+    @Res() res: express.Response,
+  ): Promise<void> {
     const user = req.user as User;
+
     await this.authService.completeOAuthLogin(user, res, {
       userAgent: req.headers['user-agent'] ?? 'unknown',
       ipAddress: req.ip ?? 'unknown',
@@ -137,9 +142,34 @@ export class AuthController {
     const frontendUrl = this.configService.getOrThrow<string>(
       'FRONTEND_OAUTH_SUCCESS_URL',
     );
-    return res.redirect(frontendUrl);
+
+    res.redirect(frontendUrl);
   }
 
+  @Get('csrf-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get a CSRF token for browser clients',
+    description:
+      'Call with credentials included, then send the returned token as X-CSRF-Token on POST, PUT, PATCH, and DELETE requests.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'CSRF token generated successfully',
+    schema: {
+      example: {
+        csrfToken: 'generated-csrf-token',
+      },
+    },
+  })
+  getCsrfToken(
+    @Req() req: express.Request,
+    @Res({ passthrough: true }) res: express.Response,
+  ) {
+    return {
+      csrfToken: this.csrfService.getCsrfToken(req, res),
+    };
+  }
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
@@ -149,12 +179,4 @@ export class AuthController {
     const refreshToken = req.cookies?.['refresh_token'] as string | undefined;
     return this.authService.refresh(refreshToken, res);
   }
-  // @Get('csrf-token')
-  // getCsrfToken(
-  //   @Req() req: express.Request,
-  //   @Res({ passthrough: true }) res: Response,
-  // ) {
-  //   const token = generateCsrfToken(req, res);
-  //   return { csrfToken: token };
-  // }
 }

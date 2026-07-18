@@ -30,7 +30,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ): Promise<void> {
     try {
-      const email = profile.emails?.[0]?.value;
+      const email = profile.emails?.find((entry) => entry.verified)?.value;
       const avatar = profile.photos?.[0]?.value ?? null;
 
       if (!email) {
@@ -42,6 +42,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       const googleProfile: ProviderUserProfile = {
         providerId: profile.id,
         email: email.trim().toLowerCase(),
+        emailVerified: true,
         name: profile.displayName || email.split('@')[0],
         avatar,
         provider: AuthProvider.google,
