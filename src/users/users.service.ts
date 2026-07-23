@@ -13,6 +13,8 @@ import {
 import { User } from './entities/user.entity';
 import { UserRepository } from './users.repo';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { GetUsersQueryDto } from './dto/pagination.dto';
+import { PaginatedResponse } from 'src/users/utils/type';
 
 type SafeUser = {
   id: string;
@@ -34,9 +36,31 @@ export class UsersService {
     private cloudinaryService: CloudinaryService,
   ) {}
 
-  async findAll(): Promise<SafeUser[]> {
-    const users = await this.userRepo.getAllUsers();
-    return users.map((user) => this.toSafeUser(user));
+  async findAll(query: GetUsersQueryDto): Promise<PaginatedResponse<SafeUser>> {
+    const { page, limit, role } = query;
+
+    const skip = (page - 1) * limit;
+
+    const { users, total } = await this.userRepo.getAllUsers({
+      skip,
+      take: limit,
+      role,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      users: users.map((user) => this.toSafeUser(user)),
+
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async findOne(id: string): Promise<SafeUser> {

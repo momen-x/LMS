@@ -9,6 +9,7 @@ import {
   ParseFilePipe,
   Patch,
   Put,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -31,6 +32,7 @@ import {
 } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 import { UploadUserAvatarDto } from './dto/upload-user-avatar.dto';
+import { GetUsersQueryDto } from './dto/pagination.dto';
 
 @Controller('users')
 export class UsersController {
@@ -75,12 +77,17 @@ export class UsersController {
   }
 
   @Get()
-  @ApiResponse({ status: 200, description: 'Get all users' })
-  @ApiOperation({ summary: 'Get all users, admin only' })
+  @ApiResponse({
+    status: 200,
+    description: 'Get paginated users',
+  })
+  @ApiOperation({
+    summary: 'Get paginated users, admin only',
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.admin)
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Query() query: GetUsersQueryDto) {
+    return this.usersService.findAll(query);
   }
 
   @Get(':id')

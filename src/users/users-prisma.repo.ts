@@ -3,6 +3,7 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { UserRepository } from './users.repo';
 import { User } from './entities/user.entity';
 import { UserRole } from '@prisma/client';
+import { GetUsersOptions, PaginatedUsersResult } from './utils/type';
 
 @Injectable()
 export class PrismaUserRepository implements UserRepository {
@@ -21,8 +22,38 @@ export class PrismaUserRepository implements UserRepository {
     });
     return updateUserPass;
   }
-  getAllUsers(): Promise<User[]> {
-    return this.prisma.user.findMany();
+  async getAllUsers(options: GetUsersOptions): Promise<PaginatedUsersResult> {
+    const { skip, take, role } = options;
+
+    const where = role
+      ? {
+          role,
+        }
+      : undefined;
+
+    const [users, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+
+      this.prisma.user.count({
+        where,
+      }),
+    ]);
+
+    return {
+      users,
+      total,
+    };
+  }
+
+  countUsers(): Promise<number> {
+    return this.prisma.user.count();
   }
   async findById(id: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({
