@@ -1,6 +1,6 @@
 import { QuizAttemptStatus, StudentAnswer } from '@prisma/client';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
-
+import { AttemptAnswerResult } from './types/attempt-answer-result.type';
 export abstract class QuizAttemptRepository {
   abstract create(
     studentId: string,
@@ -53,4 +53,7 @@ export abstract class QuizAttemptRepository {
     studentId: string,
     quizId: string,
   ): Promise<QuizAttempt[]>;
+  abstract findAnswersByAttemptId(
+    attemptId: string,
+  ): Promise<AttemptAnswerResult[]>;
 }

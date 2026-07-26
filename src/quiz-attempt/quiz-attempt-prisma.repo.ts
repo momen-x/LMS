@@ -4,6 +4,7 @@ import { QuizAttemptStatus, StudentAnswer } from '@prisma/client';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { QuizAttemptRepository } from './quiz-attempt.repo';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
+import { AttemptAnswerResult } from './types/attempt-answer-result.type';
 
 @Injectable()
 export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
@@ -124,6 +125,19 @@ export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
       },
       orderBy: {
         attemptNumber: 'desc',
+      },
+    });
+  }
+  async findAnswersByAttemptId(
+    attemptId: string,
+  ): Promise<AttemptAnswerResult[]> {
+    return this.prisma.studentAnswer.findMany({
+      where: {
+        attemptId,
+      },
+      select: {
+        questionId: true,
+        choiceId: true,
       },
     });
   }

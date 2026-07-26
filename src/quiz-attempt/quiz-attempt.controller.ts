@@ -97,4 +97,11 @@ export class QuizAttemptController {
   ) {
     return this.quizAttemptService.findMyAttempts(user.sub, user.role, quizId);
   }
+  @Get(':attemptId/answers')
+  getAttemptAnswers(
+    @Param('attemptId') attemptId: string,
+    @AuthenticatedUser() user: { sub: string },
+  ) {
+    return this.quizAttemptService.getAttemptAnswers(attemptId, user.sub);
+  }
 }

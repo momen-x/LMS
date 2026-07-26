@@ -159,4 +159,15 @@ export class QuizAttemptService {
       );
     }
   }
+  async getAttemptAnswers(attemptId: string, studentId: string) {
+    const attempt = await this.findOrThrow(attemptId);
+
+    if (attempt.studentId !== studentId) {
+      throw new ForbiddenException(
+        'You are not allowed to access this quiz attempt',
+      );
+    }
+
+    return this.quizAttemptRepo.findAnswersByAttemptId(attemptId);
+  }
 }

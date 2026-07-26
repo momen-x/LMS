@@ -97,7 +97,7 @@ export class CourseService {
     );
 
     return {
-      data: courses,
+      courses,
       meta: {
         total,
         page,

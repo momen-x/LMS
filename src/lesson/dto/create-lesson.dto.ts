@@ -28,13 +28,6 @@ export class CreateLessonDto {
   @IsOptional()
   @ApiPropertyOptional({ example: 12, description: 'Duration in seconds' })
   duration?: number;
-
-  // @Transform(({ value }) => Number(value))
-  // @IsNumber()
-  // @Min(1)
-  // @ApiProperty({ example: 1 })
-  // order!: number;
-
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()

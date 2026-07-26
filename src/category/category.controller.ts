@@ -18,7 +18,7 @@ import { Roles } from 'src/auth/decorator/user-role.decorator';
 import { UserRole } from '@prisma/client';
 import { AuthenticatedUser } from '../auth/decorator/authenticated-user.decorator';
 
-@Controller('category')
+@Controller('categories')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 

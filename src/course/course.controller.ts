@@ -30,7 +30,7 @@ import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
 import { QueryCourseDto } from './dto/search-query.dto';
 
-@Controller('course')
+@Controller('courses')
 export class CourseController {
   constructor(private readonly courseService: CourseService) {}
 

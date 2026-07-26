@@ -8,7 +8,5 @@ export class Section {
     public order: number,
     public createdAt: Date,
     public updatedAt: Date,
-    // public course: Course,
-    //   lessons Lesson[]
   ) {}
 }
