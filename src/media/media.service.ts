@@ -8,7 +8,10 @@ import { UpdateMediaDto } from './dto/update-media.dto';
 import { LessonService } from 'src/lesson/lesson.service';
 import { MediaRepository } from './media.repo';
 import { UserRole } from '@prisma/client';
-import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import {
+  CloudinaryResourceType,
+  CloudinaryService,
+} from 'src/cloudinary/cloudinary.service';
 import { SectionService } from 'src/section/section.service';
 
 @Injectable()
@@ -32,7 +35,7 @@ export class MediaService {
       throw new BadRequestException('Media file is required');
     }
 
-    const uploadedMedia = await this.cloudinaryService.uploadFile(
+    const uploadedMedia = await this.cloudinaryService.uploadMedia(
       file,
       'media',
     );
@@ -43,9 +46,13 @@ export class MediaService {
         lessonId,
         uploadedMedia.url,
         uploadedMedia.publicId,
+        uploadedMedia.resourceType,
       );
     } catch (error) {
-      await this.cloudinaryService.deleteFile(uploadedMedia.publicId);
+      await this.cloudinaryService.deleteFile(
+        uploadedMedia.publicId,
+        uploadedMedia.resourceType,
+      );
 
       throw error;
     }
@@ -80,7 +87,7 @@ export class MediaService {
       return this.mediaRepo.update(id, updateMediaDto);
     }
 
-    const uploadedMedia = await this.cloudinaryService.uploadFile(
+    const uploadedMedia = await this.cloudinaryService.uploadMedia(
       file,
       'media',
     );
@@ -91,15 +98,22 @@ export class MediaService {
         updateMediaDto,
         uploadedMedia.url,
         uploadedMedia.publicId,
+        uploadedMedia.resourceType,
       );
 
       if (media.urlPublicId) {
-        await this.cloudinaryService.deleteFile(media.urlPublicId);
+        await this.cloudinaryService.deleteFile(
+          media.urlPublicId,
+          media.cloudinaryResourceType as CloudinaryResourceType,
+        );
       }
 
       return updatedMedia;
     } catch (error) {
-      await this.cloudinaryService.deleteFile(uploadedMedia.publicId);
+      await this.cloudinaryService.deleteFile(
+        uploadedMedia.publicId,
+        uploadedMedia.resourceType,
+      );
 
       throw error;
     }
@@ -113,7 +127,10 @@ export class MediaService {
     const deletedMedia = await this.mediaRepo.remove(id);
 
     if (media.urlPublicId) {
-      await this.cloudinaryService.deleteFile(media.urlPublicId);
+      await this.cloudinaryService.deleteFile(
+        media.urlPublicId,
+        media.cloudinaryResourceType as CloudinaryResourceType,
+      );
     }
 
     return deletedMedia;

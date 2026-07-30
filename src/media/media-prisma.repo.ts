@@ -4,6 +4,7 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { Media } from './entities/media.entity';
 import { CreateMediaInputs, UpdateMediaInputs } from './types/media.type';
 import { Lesson } from 'src/lesson/entities/lesson.entity';
+import { CloudinaryResourceType } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class PrismaMediaRepository implements MediaRepository {
@@ -13,6 +14,7 @@ export class PrismaMediaRepository implements MediaRepository {
     lessonId: string,
     url: string,
     urlPublicId?: string,
+    cloudinaryResourceType?: CloudinaryResourceType,
   ): Promise<Media> {
     return this.prisma.media.create({
       data: {
@@ -20,6 +22,7 @@ export class PrismaMediaRepository implements MediaRepository {
         lessonId,
         url,
         urlPublicId,
+        cloudinaryResourceType,
       },
     });
   }
@@ -46,12 +49,13 @@ export class PrismaMediaRepository implements MediaRepository {
     data: UpdateMediaInputs,
     url?: string,
     urlPublicId?: string,
+    cloudinaryResourceType?: CloudinaryResourceType,
   ): Promise<Media> {
     return this.prisma.media.update({
       where: {
         id,
       },
-      data: { ...data, urlPublicId, url },
+      data: { ...data, urlPublicId, url, cloudinaryResourceType },
     });
   }
   remove(id: string): Promise<Media> {

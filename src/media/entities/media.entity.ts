@@ -6,6 +6,7 @@ export class Media {
     public lessonId: string,
     public url: string,
     public urlPublicId: string | null,
+    public cloudinaryResourceType: string,
     public type: MediaType,
     public duration: number | null,
     public createdAt: Date,

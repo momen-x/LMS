@@ -24,7 +24,7 @@ export class LessonService {
       role,
       section.courseId,
     );
-    const maxOrder = await this.lessonRepo.getMaxOrder(sectionId);
+    const maxOrder = (await this.lessonRepo.getMaxOrder(sectionId)) + 1;
     return this.lessonRepo.create(createLessonDto, sectionId, maxOrder);
   }
 

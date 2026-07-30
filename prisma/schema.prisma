@@ -182,14 +182,15 @@ model Lesson {
 }
 
 model Media {
-  id          String    @id @default(cuid())
-  lessonId    String
-  urlPublicId String?
-  url         String
-  type        MediaType
-  duration    Int?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                     String    @id @default(cuid())
+  lessonId               String
+  urlPublicId            String?
+  cloudinaryResourceType String @default("image")
+  url                    String
+  type                   MediaType
+  duration               Int?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 }
