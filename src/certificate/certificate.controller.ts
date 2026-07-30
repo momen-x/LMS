@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Delete,
-  Body,
   Param,
   UseGuards,
   Query,
@@ -22,7 +21,7 @@ import { CertificateService } from './certificate.service';
 export class CertificateController {
   constructor(private readonly certificateService: CertificateService) {}
 
-  @Post(':courseId/:studentId')
+  @Post(':studentId')
   @Roles(UserRole.instructor, UserRole.admin)
   @ApiOperation({ summary: 'Create a certificate for a student' })
   @ApiResponse({ status: 201, description: 'Certificate created' })
@@ -54,11 +53,6 @@ export class CertificateController {
       user.role,
     );
   }
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  findMyCertificates(@AuthenticatedUser() user: { sub: string }) {
-    return this.certificateService.findStudentCertificate(user.sub);
-  }
   @Get('search/by-number')
   @ApiOperation({ summary: 'Find a certificate by its number' })
   @ApiQuery({ name: 'certificateNumber', required: true, type: String })
@@ -70,24 +64,6 @@ export class CertificateController {
   ) {
     return this.certificateService.findByCertificateNumber(
       certificateNumber,
-      user.sub,
-      user.role,
-      courseId,
-    );
-  }
-  @Get('student/me')
-  @Roles(UserRole.instructor, UserRole.admin)
-  @ApiOperation({ summary: 'Find certificates for a specific student' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of certificates for the student',
-  })
-  async findUserCertificate(
-    @Param('courseId') courseId: string,
-    @AuthenticatedUser() user: { sub: string; role: UserRole },
-  ) {
-    return this.certificateService.findByStudentId(
-      user.sub,
       user.sub,
       user.role,
       courseId,

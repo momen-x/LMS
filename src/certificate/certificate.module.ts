@@ -7,9 +7,10 @@ import { EnrollmentModule } from 'src/enrollment/enrollment.module';
 import { UsersModule } from 'src/users/users.module';
 import { NotificationModule } from 'src/notification/notification.module';
 import { CourseModule } from 'src/course/course.module';
+import { MineCertificateController } from './certificate-me.controller';
 
 @Module({
-  controllers: [CertificateController],
+  controllers: [CertificateController, MineCertificateController],
   providers: [
     CertificateService,
     { provide: CertificateRepository, useClass: PrismaCertificateRepository },

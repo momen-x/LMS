@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { EnrollmentService } from './enrollment.service';
 import { EnrollmentController } from './enrollment.controller';
+import { UsersEnrollmentCourse } from './enrollment-users-course.controller';
 import { PrismaEnrollmentRepository } from './enrollment-prisma.repo';
 import { EnrollmentRepository } from './enrollment.repo';
 import { UsersModule } from 'src/users/users.module';
 import { CourseModule } from 'src/course/course.module';
-import { UsersEnrollmentCourse } from './users-enrollment-course.controller';
 
 @Module({
   controllers: [EnrollmentController, UsersEnrollmentCourse],

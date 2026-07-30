@@ -7,11 +7,11 @@ import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { EnrollmentService } from './enrollment.service';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
 
-@Controller()
+@Controller('courses/:courseId/enrollments')
 export class UsersEnrollmentCourse {
   constructor(private readonly enrollmentService: EnrollmentService) {}
 
-  @Post(':userId/:courseId/enrollment')
+  @Post()
   @ApiOperation({ summary: 'Create a new enrollment' })
   @ApiResponse({ status: 201, description: 'Enrollment created successfully' })
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -19,11 +19,11 @@ export class UsersEnrollmentCourse {
   async create(
     @Param('userId') userId: string,
     @Param('courseId') courseId: string,
-    @AuthenticatedUser() actor: { sub: string; role: UserRole },
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
   ) {
     await this.enrollmentService.validateInstructorOwnerCourse(
-      actor.sub,
-      actor.role,
+      user.sub,
+      user.role,
       courseId,
     );
     return this.enrollmentService.create({
@@ -31,7 +31,7 @@ export class UsersEnrollmentCourse {
       courseId,
     });
   }
-  @Get('users/:courseId/enrollment')
+  @Get()
   @ApiOperation({ summary: 'Get all enrollments for a course' })
   @ApiResponse({ status: 200, description: 'Get all enrollments for a course' })
   @UseGuards(JwtAuthGuard, RolesGuard)
