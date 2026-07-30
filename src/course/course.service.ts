@@ -54,7 +54,12 @@ export class CourseService {
     const { skip } = this.skipAndTake(page, limit);
     return this.courseRepository.find(skip, limit);
   }
+  finsInstructorCourses(instructorId: string, role: UserRole) {
+    if (role !== UserRole.admin && role !== UserRole.instructor)
+      throw new ForbiddenException("you can't find instructor courses");
 
+    return this.courseRepository.findInstructorCourses(instructorId);
+  }
   findOne(id: string) {
     return this.findOrThrow(id);
   }

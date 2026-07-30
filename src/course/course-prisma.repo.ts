@@ -43,6 +43,12 @@ export class PrismaCourseRepository implements CourseRepository {
     // Convert PrismaCourse[] to Course[] entities
     return { courses: courses.map(this.returnCourse), total };
   }
+  async findInstructorCourses(instructorId: string): Promise<Course[]> {
+    const courses = await this.prisma.course.findMany({
+      where: { instructorId },
+    });
+    return courses.map(this.returnCourse);
+  }
   async create(
     instructorId: string,
     data: CreateCourseInput,

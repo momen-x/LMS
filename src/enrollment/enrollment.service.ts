@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -55,7 +54,9 @@ export class EnrollmentService {
   findOne(id: string) {
     return this.findOrThrow(id);
   }
-
+  findUserEnrollments(userId: string, courseId?: string) {
+    return this.enrollmentRepository.findUserEnrollments(userId, courseId);
+  }
   async updateProgress(
     id: string,
     updateEnrollmentDto: UpdateEnrollmentProgressDto,
@@ -63,15 +64,6 @@ export class EnrollmentService {
     await this.findOrThrow(id);
     return this.enrollmentRepository.updateProgress(id, updateEnrollmentDto);
   }
-  // async findByUserAndCourse(studentId: string, courseId: string) {
-  //   const enrollment =
-  //     await this.enrollmentRepository.findByStudentIdAndCourseId(
-  //       studentId,
-  //       courseId,
-  //     );
-  //   if (!enrollment) throw new NotFoundException('Enrollment not found');
-  //   return enrollment;
-  // }
 
   async markCompleted(id: string) {
     await this.findOrThrow(id);
@@ -102,16 +94,17 @@ export class EnrollmentService {
   }
   async validateEnrollmentCreation(studentId: string, courseId: string) {
     const user = await this.userService.findOne(studentId);
-
     const course = await this.courseService.findOne(courseId);
+
     const enrollment = await this.enrollmentRepository.findByStudentAndCourse(
       studentId,
       courseId,
     );
 
     if (enrollment) {
-      throw new BadRequestException('Already enrolled in this course');
+      throw new ConflictException('Already enrolled in this course');
     }
+
     return { user, course };
   }
   async validateInstructorOwnerCourse(

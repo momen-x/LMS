@@ -3,6 +3,7 @@ import { PaymentStatus } from '@prisma/client';
 import { UpdateEnrollmentProgressDto } from './dto/update-enrollment.dto';
 import {
   CreateEnrollmentInput,
+  EnrollmentWithCourse,
   SafeEnrollmentStudent,
 } from './type/enrollment.type';
 import { Enrollment } from './entities/enrollment.entity';
@@ -37,6 +38,7 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
   find(): Promise<Enrollment[]> {
     return this.prisma.enrollment.findMany();
   }
+
   findCourseStudent(
     courseId: string,
   ): Promise<(Enrollment & { student: SafeEnrollmentStudent })[]> {
@@ -100,5 +102,38 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
       select: { id: true },
     });
     return payment !== null;
+  }
+
+  findUserEnrollments(
+    userId: string,
+    courseId?: string,
+  ): Promise<EnrollmentWithCourse[]> {
+    return this.prisma.enrollment.findMany({
+      where: {
+        studentId: userId,
+        ...(courseId ? { courseId } : {}),
+      },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            thumbnail: true,
+            level: true,
+            status: true,
+            instructor: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        enrolledAt: 'desc',
+      },
+    });
   }
 }

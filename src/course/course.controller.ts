@@ -125,6 +125,33 @@ export class CourseController {
   search(@Query() query: QueryCourseDto) {
     return this.courseService.findByQuery(query);
   }
+  @Get('instructor/my-courses')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.admin, UserRole.instructor)
+  @ApiResponse({
+    status: 200,
+    description: 'Get the course that created by this user',
+  })
+  @ApiOperation({ summary: 'Get the course that created by this user' })
+  getInstructorCourses(
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.courseService.finsInstructorCourses(user.sub, user.role);
+  }
+  @Get(':instructorId/courses')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.admin)
+  @ApiResponse({
+    status: 200,
+    description: 'Get the course that created by this user',
+  })
+  @ApiOperation({ summary: 'Get the course that created by this user' })
+  getInstructorCoursesByAdmin(
+    @AuthenticatedUser() user: { role: UserRole },
+    @Param('instructorId') instructorId: string,
+  ) {
+    return this.courseService.finsInstructorCourses(instructorId, user.role);
+  }
 
   @Get(':id')
   findOne(@Param('id') id: string) {

@@ -2,6 +2,7 @@ import { UpdateEnrollmentProgressDto } from './dto/update-enrollment.dto';
 import { Enrollment } from './entities/enrollment.entity';
 import {
   CreateEnrollmentInput,
+  EnrollmentWithCourse,
   SafeEnrollmentStudent,
 } from './type/enrollment.type';
 
@@ -26,4 +27,8 @@ export abstract class EnrollmentRepository {
     courseId: string,
   ): Promise<boolean>;
   abstract delete(id: string): Promise<Enrollment>;
+  abstract findUserEnrollments(
+    userId: string,
+    courseId?: string,
+  ): Promise<EnrollmentWithCourse[]>;
 }

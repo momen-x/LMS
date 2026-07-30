@@ -10,6 +10,7 @@ export abstract class CourseRepository {
     skip: number,
     take: number,
   ): Promise<{ courses: Course[]; total: number }>;
+  abstract findInstructorCourses(instructorId: string): Promise<Course[]>;
   abstract create(
     instructorId: string,
     data: CreateCourseInput,
