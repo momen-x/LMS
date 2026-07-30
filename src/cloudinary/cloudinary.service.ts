@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/prefer-promise-reject-errors */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable } from '@nestjs/common';
@@ -53,7 +54,7 @@ export class CloudinaryService {
         (error, result) => {
           if (error || !result) {
             console.error('Cloudinary upload error:', error);
-            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+
             return reject(error || new Error('Upload failed'));
           }
           resolve({
@@ -80,7 +81,7 @@ export class CloudinaryService {
         }
       } catch (error) {
         console.error('Error preparing file for upload:', error);
-        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+
         reject(error);
       }
     });
@@ -128,7 +129,7 @@ export class CloudinaryService {
         }
       } catch (error) {
         console.error('Error preparing media file for upload:', error);
-        reject(error);
+        reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
   }

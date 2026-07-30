@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import express from 'express';
