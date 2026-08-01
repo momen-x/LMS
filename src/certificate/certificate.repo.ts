@@ -16,4 +16,7 @@ export abstract class CertificateRepository {
     courseId: string,
   ): Promise<Certificate | null>;
   abstract findByCourseId(courseId: string): Promise<Certificate[]>;
+  abstract countByCourseId(courseId: string): Promise<number>;
+  abstract countByStudentId(studentId: string): Promise<number>;
+  abstract countAll(): Promise<number>;
 }

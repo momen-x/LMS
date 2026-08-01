@@ -179,6 +179,31 @@ export class CertificateService {
     );
     return this.certificateRepository.findByCourseId(courseId);
   }
+  async countByCourseId(
+    courseId: string,
+    instructorId: string,
+    role: UserRole,
+  ) {
+    await this.enrollmentService.validateInstructorOwnerCourse(
+      instructorId,
+      role,
+      courseId,
+    );
+    return {
+      count: await this.certificateRepository.countByCourseId(courseId),
+    };
+  }
+  async countMine(studentId: string) {
+    return {
+      count: await this.certificateRepository.countByStudentId(studentId),
+    };
+  }
+  async countAll(role: UserRole) {
+    if (role !== UserRole.admin) {
+      throw new BadRequestException('Only admins can view the total count');
+    }
+    return { count: await this.certificateRepository.countAll() };
+  }
   private async findOrThrow(id: string) {
     const certificate = await this.certificateRepository.findById(id);
     if (!certificate) {

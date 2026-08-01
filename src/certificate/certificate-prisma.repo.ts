@@ -40,6 +40,15 @@ export class PrismaCertificateRepository implements CertificateRepository {
       },
     });
   }
+  countByCourseId(courseId: string): Promise<number> {
+    return this.prisma.certificate.count({ where: { courseId } });
+  }
+  countByStudentId(studentId: string): Promise<number> {
+    return this.prisma.certificate.count({ where: { studentId } });
+  }
+  countAll(): Promise<number> {
+    return this.prisma.certificate.count();
+  }
 
   delete(id: string): Promise<Certificate> {
     return this.prisma.certificate.delete({

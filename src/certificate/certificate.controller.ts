@@ -15,7 +15,7 @@ import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { CertificateService } from './certificate.service';
 
-@ApiTags('Certificates')
+@ApiTags('certificates')
 @Controller('courses/:courseId/certificates')
 @UseGuards(JwtAuthGuard, RolesGuard) // global guard for all routes (except overridden)
 export class CertificateController {
@@ -48,6 +48,19 @@ export class CertificateController {
     @AuthenticatedUser() user: { sub: string; role: UserRole },
   ) {
     return this.certificateService.findByCourseId(
+      courseId,
+      user.sub,
+      user.role,
+    );
+  }
+  @Get('count')
+  @Roles(UserRole.instructor, UserRole.admin)
+  @ApiOperation({ summary: 'Count certificates issued for this course' })
+  countByCourse(
+    @Param('courseId') courseId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.certificateService.countByCourseId(
       courseId,
       user.sub,
       user.role,
