@@ -29,6 +29,7 @@ import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
 import { QueryCourseDto } from './dto/search-query.dto';
+import { CreateRejectedMessageDto } from './dto/create-rejected-message.dto';
 
 @Controller('courses')
 export class CourseController {
@@ -97,7 +98,12 @@ export class CourseController {
     description: 'filtering by category',
   })
   @ApiQuery({
-    name: 'price',
+    name: 'minPrice',
+    required: false,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'maxPrice',
     required: false,
     type: Number,
   })
@@ -138,6 +144,21 @@ export class CourseController {
   ) {
     return this.courseService.finsInstructorCourses(user.sub, user.role);
   }
+  @Get('instructor/enrollment-stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.instructor, UserRole.admin)
+  @ApiOperation({
+    summary: 'Get enrollment statistics for instructor courses',
+  })
+  getInstructorEnrollmentStats(
+    @AuthenticatedUser()
+    user: {
+      sub: string;
+      role: UserRole;
+    },
+  ) {
+    return this.courseService.getInstructorEnrollmentStats(user.sub, user.role);
+  }
   @Get(':instructorId/courses')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.admin)
@@ -151,6 +172,12 @@ export class CourseController {
     @Param('instructorId') instructorId: string,
   ) {
     return this.courseService.finsInstructorCourses(instructorId, user.role);
+  }
+  @Get('pending')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.admin)
+  getPendingCourses() {
+    return this.courseService.findPendingCourses();
   }
 
   @Get(':id')
@@ -196,10 +223,38 @@ export class CourseController {
       file,
     );
   }
+  @Patch(':id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.admin)
+  approve(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: { role: UserRole; sub: string },
+  ) {
+    return this.courseService.approveCourse(id, user.role);
+  }
+  @Patch(':id/submit-for-review')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.instructor, UserRole.admin)
+  submitForReview(
+    @Param('id') id: string,
+    @AuthenticatedUser() user: { role: UserRole; sub: string },
+  ) {
+    return this.courseService.submitCourseForReview(id, user.sub, user.role);
+  }
+  @Patch(':id/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.admin)
+  reject(
+    @Param('id') id: string,
+    @Body() dto: CreateRejectedMessageDto,
+    @AuthenticatedUser() user: { role: UserRole; sub: string },
+  ) {
+    return this.courseService.rejectCourse(id, dto, user.role);
+  }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.instructor)
+  @Roles(UserRole.admin, UserRole.instructor)
   remove(
     @Param('id') id: string,
     @AuthenticatedUser() user: { sub: string; role: UserRole },

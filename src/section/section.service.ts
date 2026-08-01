@@ -10,6 +10,7 @@ import { SectionRepository } from './section.repo';
 import { UserRole } from '@prisma/client';
 import { CourseService } from 'src/course/course.service';
 import { EnrollmentService } from 'src/enrollment/enrollment.service';
+import { NotificationRepository } from 'src/notification/notification.repo';
 
 @Injectable()
 export class SectionService {
@@ -17,6 +18,7 @@ export class SectionService {
     private readonly sectionRepo: SectionRepository,
     private readonly enrollmentService: EnrollmentService,
     private readonly courseService: CourseService,
+    private readonly notificationRepo: NotificationRepository,
   ) {}
 
   async create(
@@ -26,6 +28,7 @@ export class SectionService {
     courseId: string,
   ) {
     await this.validateCourseManagementAccess(instructorId, role, courseId);
+
     const existingSection = await this.sectionRepo.findByCourseAndOrder(
       courseId,
       createSectionDto.order,
@@ -36,7 +39,13 @@ export class SectionService {
         `Section order ${createSectionDto.order} already exists in this course`,
       );
     }
-    return this.sectionRepo.create(createSectionDto, courseId);
+    const section = await this.sectionRepo.create(createSectionDto, courseId);
+    await this.notificationRepo.createCourseInformationNotification(
+      courseId,
+      'New Section Added',
+      `A new section titled "${section.title}" has been added to the course.`,
+    );
+    return section;
   }
 
   async findAll() {

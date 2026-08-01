@@ -1,6 +1,8 @@
 import { Course } from './entities/course.entity';
 import { CourseWhereFilter } from './types/course-query.type';
 import { CreateCourseInput, UpdateCourseInput } from './types/course.type';
+import { InstructorEnrollmentStats } from './types/instructor-enrollment-stats.type';
+import { CourseStatus } from '@prisma/client';
 
 export abstract class CourseRepository {
   abstract find(skip: number, take: number): Promise<Course[]>;
@@ -10,6 +12,7 @@ export abstract class CourseRepository {
     skip: number,
     take: number,
   ): Promise<{ courses: Course[]; total: number }>;
+  abstract findPendingCourses(): Promise<Course[]>;
   abstract findInstructorCourses(instructorId: string): Promise<Course[]>;
   abstract create(
     instructorId: string,
@@ -23,5 +26,17 @@ export abstract class CourseRepository {
     thumbnailURL: string | null,
     thumbnailPublicId?: string,
   ): Promise<Course>;
+  abstract updateCourseStatus(
+    id: string,
+    status: CourseStatus,
+    publishedAt?: Date | null,
+  ): Promise<Course>;
+  abstract getSubmissionReadiness(id: string): Promise<{
+    sectionsCount: number;
+    lessonsCount: number;
+  } | null>;
   abstract delete(id: string): Promise<Course>;
+  abstract getInstructorEnrollmentStats(
+    instructorId: string,
+  ): Promise<InstructorEnrollmentStats>;
 }

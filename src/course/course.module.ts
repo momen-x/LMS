@@ -7,6 +7,7 @@ import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { CategoryService } from 'src/category/category.service';
 import { CategoryRepository } from 'src/category/category.repo';
 import { PrismaCategoryRepository } from 'src/category/category-prisma.repo';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   controllers: [CourseController],
@@ -18,5 +19,6 @@ import { PrismaCategoryRepository } from 'src/category/category-prisma.repo';
     { provide: CategoryRepository, useClass: PrismaCategoryRepository },
   ],
   exports: [CourseService],
+  imports: [NotificationModule],
 })
 export class CourseModule {}
