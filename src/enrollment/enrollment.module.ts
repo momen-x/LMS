@@ -6,6 +6,7 @@ import { PrismaEnrollmentRepository } from './enrollment-prisma.repo';
 import { EnrollmentRepository } from './enrollment.repo';
 import { UsersModule } from 'src/users/users.module';
 import { CourseModule } from 'src/course/course.module';
+import { NotificationModule } from 'src/notification/notification.module';
 
 @Module({
   controllers: [EnrollmentController, UsersEnrollmentCourse],
@@ -14,6 +15,6 @@ import { CourseModule } from 'src/course/course.module';
     { provide: EnrollmentRepository, useClass: PrismaEnrollmentRepository },
   ],
   exports: [EnrollmentService],
-  imports: [UsersModule, CourseModule],
+  imports: [UsersModule, CourseModule, NotificationModule],
 })
 export class EnrollmentModule {}

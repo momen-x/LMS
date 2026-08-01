@@ -29,6 +29,7 @@ enum CourseStatus {
   draft
   published
   archived
+  pending_review
 }
 
 enum MediaType {
@@ -164,19 +165,20 @@ model Section {
 }
 
 model Lesson {
-  id          String   @id @default(cuid())
-  sectionId   String
-  title       String
-  description String?
-  duration    Int      @default(0)
-  order       Int
-  isPreview   Boolean  @default(false)
-  resources   Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  section     Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  media       Media[]
-  quizzes     Quiz[]
+  id              String           @id @default(cuid())
+  sectionId       String
+  title           String
+  description     String?
+  duration        Int              @default(0)
+  order           Int
+  isPreview       Boolean          @default(false)
+  resources       Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  section         Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  media           Media[]
+  quizzes         Quiz[]
+  progressRecords LessonProgress[]
 
   @@unique([sectionId, order])
 }
@@ -185,7 +187,7 @@ model Media {
   id                     String    @id @default(cuid())
   lessonId               String
   urlPublicId            String?
-  cloudinaryResourceType String @default("image")
+  cloudinaryResourceType String    @default("image")
   url                    String
   type                   MediaType
   duration               Int?
@@ -206,12 +208,30 @@ model Enrollment {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student        User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonProgress LessonProgress[]
 
   @@unique([studentId, courseId])
   @@index([studentId])
   @@index([courseId])
+}
+
+model LessonProgress {
+  id           String    @id @default(cuid())
+  enrollmentId String
+  lessonId     String
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, lessonId])
+  @@index([enrollmentId])
+  @@index([lessonId])
 }
 
 model Certificate {

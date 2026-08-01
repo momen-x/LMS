@@ -10,6 +10,7 @@ import { EnrollmentRepository } from './enrollment.repo';
 import { UsersService } from 'src/users/users.service';
 import { CourseService } from 'src/course/course.service';
 import { Prisma, UserRole } from '@prisma/client';
+import { NotificationsService } from 'src/notification/notification.service';
 
 @Injectable()
 export class EnrollmentService {
@@ -17,14 +18,29 @@ export class EnrollmentService {
     private readonly enrollmentRepository: EnrollmentRepository,
     private readonly userService: UsersService,
     private readonly courseService: CourseService,
+    private readonly notificationService: NotificationsService,
   ) {}
   async create(createEnrollmentDto: CreateEnrollmentDto) {
-    await this.validateEnrollmentCreation(
+    const { course } = await this.validateEnrollmentCreation(
       createEnrollmentDto.studentId,
       createEnrollmentDto.courseId,
     );
     try {
-      return await this.enrollmentRepository.create(createEnrollmentDto);
+      const enrollment =
+        await this.enrollmentRepository.create(createEnrollmentDto);
+      await this.notificationService.create({
+        text: `You have been enrolled in the course with ID ${createEnrollmentDto.courseId}`,
+        userId: createEnrollmentDto.studentId,
+        title: 'Enrollment Successful',
+        type: 'info',
+      });
+      await this.notificationService.create({
+        text: `A new student has enrolled in your course!!`,
+        userId: course.instructorId,
+        title: 'New Enrollment',
+        type: 'info',
+      });
+      return enrollment;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -84,6 +100,42 @@ export class EnrollmentService {
       );
     }
     return this.enrollmentRepository.delete(id);
+  }
+  async getUserEnrollmentStats(userId: string) {
+    return this.enrollmentRepository.getUserEnrollmentStats(userId);
+  }
+  async setLessonCompletion(
+    userId: string,
+    role: UserRole,
+    enrollmentId: string,
+    lessonId: string,
+    completed: boolean,
+  ) {
+    if (role !== UserRole.student) {
+      throw new ForbiddenException('Only students can update lesson progress');
+    }
+    const enrollment = await this.findOrThrow(enrollmentId);
+    if (enrollment.studentId !== userId) {
+      throw new ForbiddenException('You do not own this enrollment');
+    }
+    if (enrollment.completed && !completed) {
+      throw new ConflictException(
+        'Completed course progress cannot be reversed',
+      );
+    }
+    const lessonCourseId =
+      await this.enrollmentRepository.findLessonCourseId(lessonId);
+    if (!lessonCourseId) throw new NotFoundException('Lesson not found');
+    if (lessonCourseId !== enrollment.courseId) {
+      throw new ForbiddenException(
+        'Lesson does not belong to the enrolled course',
+      );
+    }
+    return this.enrollmentRepository.setLessonCompletion(
+      enrollmentId,
+      lessonId,
+      completed,
+    );
   }
   private async findOrThrow(id: string) {
     const enrollment = await this.enrollmentRepository.findOne(id);

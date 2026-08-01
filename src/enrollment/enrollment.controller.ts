@@ -3,6 +3,7 @@ import {
   Delete,
   Get,
   Param,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -45,7 +46,50 @@ export class EnrollmentController {
   ) {
     return this.enrollmentService.findUserEnrollments(user.sub, courseId);
   }
+  @Get('me/stats')
+  @UseGuards(JwtAuthGuard)
+  getMyStats(
+    @AuthenticatedUser()
+    user: {
+      sub: string;
+      role: UserRole;
+    },
+  ) {
+    return this.enrollmentService.getUserEnrollmentStats(user.sub);
+  }
+  @Post(':enrollmentId/lessons/:lessonId/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.student)
+  completeLesson(
+    @Param('enrollmentId') enrollmentId: string,
+    @Param('lessonId') lessonId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.enrollmentService.setLessonCompletion(
+      user.sub,
+      user.role,
+      enrollmentId,
+      lessonId,
+      true,
+    );
+  }
 
+  @Delete(':enrollmentId/lessons/:lessonId/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.student)
+  uncompleteLesson(
+    @Param('enrollmentId') enrollmentId: string,
+    @Param('lessonId') lessonId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.enrollmentService.setLessonCompletion(
+      user.sub,
+      user.role,
+      enrollmentId,
+      lessonId,
+      false,
+    );
+  }
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.admin, UserRole.instructor)

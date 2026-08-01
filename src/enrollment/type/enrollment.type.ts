@@ -29,3 +29,16 @@ export type EnrollmentWithCourse = Enrollment & {
     };
   };
 };
+
+export type LessonCompletionResult = {
+  enrollment: Enrollment;
+  lessonProgress: {
+    id: string;
+    enrollmentId: string;
+    lessonId: string;
+    completed: boolean;
+    completedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+};

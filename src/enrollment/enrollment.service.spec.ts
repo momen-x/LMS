@@ -23,6 +23,7 @@ describe('EnrollmentService', () => {
       hasCompletedPayment: jest.fn().mockResolvedValue(false),
       delete: jest.fn().mockResolvedValue(enrollment),
       findByStudentAndCourse: jest.fn().mockResolvedValue(null),
+      setLessonCompletion: jest.fn(),
     };
     const userService = {
       findOne: jest.fn().mockResolvedValue({ role: UserRole.student }),
@@ -71,6 +72,27 @@ describe('EnrollmentService', () => {
       service.remove('enrollment-1', UserRole.instructor),
     ).rejects.toThrow(ForbiddenException);
     expect(enrollmentRepository.delete).not.toHaveBeenCalled();
+  });
+
+  it('prevents reversing lesson progress after course completion', async () => {
+    const { service, enrollmentRepository } = setup();
+    enrollmentRepository.findOne.mockResolvedValue({
+      ...enrollment,
+      progress: 100,
+      completed: true,
+      completedAt: new Date(),
+    });
+
+    await expect(
+      service.setLessonCompletion(
+        'student-1',
+        UserRole.student,
+        'enrollment-1',
+        'lesson-1',
+        false,
+      ),
+    ).rejects.toThrow('Completed course progress cannot be reversed');
+    expect(enrollmentRepository.setLessonCompletion).not.toHaveBeenCalled();
   });
 
   it.each([-1, 101])('rejects progress outside 0-100: %s', async (progress) => {

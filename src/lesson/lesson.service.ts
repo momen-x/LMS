@@ -4,12 +4,14 @@ import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { UserRole } from '@prisma/client';
 import { LessonRepository } from './lesson.repo';
 import { SectionService } from 'src/section/section.service';
+import { NotificationRepository } from 'src/notification/notification.repo';
 
 @Injectable()
 export class LessonService {
   constructor(
     private readonly lessonRepo: LessonRepository,
     private readonly sectionService: SectionService,
+    private readonly notificationRepo: NotificationRepository,
   ) {}
 
   async create(
@@ -25,7 +27,17 @@ export class LessonService {
       section.courseId,
     );
     const maxOrder = (await this.lessonRepo.getMaxOrder(sectionId)) + 1;
-    return this.lessonRepo.create(createLessonDto, sectionId, maxOrder);
+    const newLesson = await this.lessonRepo.create(
+      createLessonDto,
+      sectionId,
+      maxOrder,
+    );
+    await this.notificationRepo.createCourseInformationNotification(
+      section.courseId,
+      'New Lesson Added',
+      `A new lesson titled "${newLesson.title}" has been added to the course.`,
+    );
+    return newLesson;
   }
 
   findAll() {

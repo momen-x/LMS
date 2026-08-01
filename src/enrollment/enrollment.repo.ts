@@ -3,6 +3,7 @@ import { Enrollment } from './entities/enrollment.entity';
 import {
   CreateEnrollmentInput,
   EnrollmentWithCourse,
+  LessonCompletionResult,
   SafeEnrollmentStudent,
 } from './type/enrollment.type';
 
@@ -31,4 +32,16 @@ export abstract class EnrollmentRepository {
     userId: string,
     courseId?: string,
   ): Promise<EnrollmentWithCourse[]>;
+  abstract getUserEnrollmentStats(userId: string): Promise<{
+    totalCourses: number;
+    completedCourses: number;
+    inProgressCourses: number;
+    averageProgress: number;
+  }>;
+  abstract findLessonCourseId(lessonId: string): Promise<string | null>;
+  abstract setLessonCompletion(
+    enrollmentId: string,
+    lessonId: string,
+    completed: boolean,
+  ): Promise<LessonCompletionResult>;
 }

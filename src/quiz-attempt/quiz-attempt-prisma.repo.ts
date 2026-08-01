@@ -5,6 +5,7 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { QuizAttemptRepository } from './quiz-attempt.repo';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
 import { AttemptAnswerResult } from './types/attempt-answer-result.type';
+import { syncEnrollmentProgress } from 'src/enrollment/enrollment-progress';
 
 @Injectable()
 export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
@@ -108,9 +109,36 @@ export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
       submittedAt: Date;
     },
   ): Promise<QuizAttempt> {
-    return this.prisma.quizAttempt.update({
-      where: { id },
-      data,
+    return this.prisma.$transaction(async (transaction) => {
+      const attempt = await transaction.quizAttempt.update({
+        where: { id },
+        data,
+      });
+      const quiz = await transaction.quiz.findUniqueOrThrow({
+        where: { id: attempt.quizId },
+        select: {
+          lesson: {
+            select: {
+              section: {
+                select: { courseId: true },
+              },
+            },
+          },
+        },
+      });
+      const enrollment = await transaction.enrollment.findUnique({
+        where: {
+          studentId_courseId: {
+            studentId: attempt.studentId,
+            courseId: quiz.lesson.section.courseId,
+          },
+        },
+        select: { id: true },
+      });
+      if (enrollment) {
+        await syncEnrollmentProgress(transaction, enrollment.id);
+      }
+      return attempt;
     });
   }
 
