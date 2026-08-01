@@ -14,6 +14,10 @@ export class NotificationsService {
     return this.notificationRepository.create(input);
   }
 
+  createForAdmins(input: Omit<CreateNotificationInput, 'userId'>) {
+    return this.notificationRepository.createAdminNotifications(input);
+  }
+
   async findMine(
     userId: string,
     page: number,

@@ -90,4 +90,40 @@ export class PrismaNotificationRepository implements NotificationRepository {
     ]);
     return { data, total };
   }
+  async createCourseInformationNotification(
+    courseId: string,
+    title: string,
+    text: string,
+  ): Promise<{ count: number }> {
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { courseId },
+      select: { studentId: true },
+    });
+
+    if (enrollments.length === 0) {
+      return { count: 0 };
+    }
+
+    return this.prisma.notification.createMany({
+      data: enrollments.map((enrollment) => ({
+        userId: enrollment.studentId,
+        title,
+        text,
+        type: 'info' as const,
+      })),
+    });
+  }
+
+  async createAdminNotifications(
+    input: Omit<CreateNotificationInput, 'userId'>,
+  ): Promise<{ count: number }> {
+    const admins = await this.prisma.user.findMany({
+      where: { role: 'admin' },
+      select: { id: true },
+    });
+    if (admins.length === 0) return { count: 0 };
+    return this.prisma.notification.createMany({
+      data: admins.map(({ id }) => ({ ...input, userId: id })),
+    });
+  }
 }

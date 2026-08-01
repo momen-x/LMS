@@ -22,4 +22,12 @@ export abstract class NotificationRepository {
   abstract markAllAsRead(userId: string): Promise<number>;
   abstract delete(id: string, userId: string): Promise<boolean>;
   abstract deleteAllRead(userId: string): Promise<number>;
+  abstract createCourseInformationNotification(
+    courseId: string,
+    title: string,
+    text: string,
+  ): Promise<{ count: number }>;
+  abstract createAdminNotifications(
+    input: Omit<CreateNotificationInput, 'userId'>,
+  ): Promise<{ count: number }>;
 }
