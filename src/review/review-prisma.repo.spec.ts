@@ -44,6 +44,11 @@ describe('PrismaReviewRepository', () => {
   it('creates a review and refreshes average rating atomically', async () => {
     const { repository, transaction } = setup(4.5);
     await repository.create('student-1', 'course-1', { rating: 5 });
+    expect(transaction.review.aggregate).toHaveBeenCalledTimes(1);
+    expect(transaction.review.aggregate).toHaveBeenCalledWith({
+      where: { courseId: 'course-1' },
+      _avg: { rating: true },
+    });
     expect(transaction.course.update).toHaveBeenCalledWith({
       where: { id: 'course-1' },
       data: { averageRating: 4.5 },
@@ -69,6 +74,10 @@ describe('PrismaReviewRepository', () => {
     expect(transaction.course.update).toHaveBeenCalledWith({
       where: { id: 'course-1' },
       data: { averageRating: 3.5 },
+    });
+    expect(transaction.review.aggregate).toHaveBeenCalledWith({
+      where: { courseId: 'course-1' },
+      _avg: { rating: true },
     });
   });
 
