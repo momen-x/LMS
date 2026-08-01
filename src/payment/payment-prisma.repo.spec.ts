@@ -6,7 +6,11 @@ describe('PrismaPaymentRepository', () => {
     const payment = { id: 'payment-1', status: PaymentStatus.completed };
     const transaction = {
       payment: { update: jest.fn().mockResolvedValue(payment) },
-      enrollment: { upsert: jest.fn().mockResolvedValue({}) },
+      enrollment: {
+        upsert: jest.fn().mockResolvedValue({}),
+        count: jest.fn().mockResolvedValue(1),
+      },
+      course: { update: jest.fn().mockResolvedValue({}) },
     };
     const prisma = {
       $transaction: jest.fn(
@@ -42,6 +46,13 @@ describe('PrismaPaymentRepository', () => {
       },
       create: { studentId: 'user-1', courseId: 'course-1' },
       update: {},
+    });
+    expect(transaction.enrollment.count).toHaveBeenCalledWith({
+      where: { courseId: 'course-1' },
+    });
+    expect(transaction.course.update).toHaveBeenCalledWith({
+      where: { id: 'course-1' },
+      data: { totalStudents: 1 },
     });
   });
 });

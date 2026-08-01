@@ -182,6 +182,12 @@ export class PaymentService {
           text: `You have successfully enrolled in ${course.title}.`,
           type: NotificationType.success,
         });
+        await this.notificationsService.create({
+          userId: course.instructorId,
+          title: 'New enrollment',
+          text: `A student enrolled in ${course.title}.`,
+          type: NotificationType.info,
+        });
       } catch (error) {
         this.logger.warn(
           `Payment ${payment.id} completed but its notification failed: ${this.errorMessage(error)}`,

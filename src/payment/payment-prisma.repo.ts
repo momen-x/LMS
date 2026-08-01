@@ -3,6 +3,7 @@ import { PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { PaymentRepository } from './payment.repo';
 import { Payment } from './entities/payment.entity';
+import { syncCourseTotalStudents } from 'src/common/prisma/course-stats';
 
 @Injectable()
 export class PrismaPaymentRepository implements PaymentRepository {
@@ -68,6 +69,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
         create: { studentId, courseId },
         update: {},
       });
+      await syncCourseTotalStudents(transaction, courseId);
       return payment;
     });
   }
