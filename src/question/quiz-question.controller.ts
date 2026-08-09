@@ -8,8 +8,8 @@ import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { QuestionService } from './question.service';
 
-@Controller('quizzes/:quizId/questions')
-export class QuizQuestionsController {
+@Controller('question-banks/:questionBankId/questions')
+export class QuestionBankQuestionsController {
   constructor(private readonly questionService: QuestionService) {}
 
   @Post()
@@ -18,7 +18,7 @@ export class QuizQuestionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.instructor, UserRole.admin)
   create(
-    @Param('quizId') quizId: string,
+    @Param('questionBankId') questionBankId: string,
     @AuthenticatedUser() user: { sub: string; role: UserRole },
     @Body() createQuestionDto: CreateQuestionDto,
   ) {
@@ -26,17 +26,21 @@ export class QuizQuestionsController {
       user.sub,
       user.role,
       createQuestionDto,
-      quizId,
+      questionBankId,
     );
   }
   @Get()
-  @ApiResponse({ status: 200, description: 'Get all questions by quiz id' })
-  @ApiOperation({ summary: 'get all questions by quiz id' })
+  @ApiResponse({ status: 200, description: 'Get all questions in a question bank' })
+  @ApiOperation({ summary: 'Get all questions in a question bank' })
   @UseGuards(JwtAuthGuard)
-  findByQuizId(
-    @Param('quizId') quizId: string,
+  findByQuestionBankId(
+    @Param('questionBankId') questionBankId: string,
     @AuthenticatedUser() user: { sub: string; role: UserRole },
   ) {
-    return this.questionService.findByQuizId(user.sub, user.role, quizId);
+    return this.questionService.findByQuestionBankId(
+      user.sub,
+      user.role,
+      questionBankId,
+    );
   }
 }

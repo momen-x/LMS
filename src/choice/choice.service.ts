@@ -102,7 +102,7 @@ export class ChoiceService {
     await this.questionService.validateQuestionManagementAccess(
       userId,
       role,
-      question.quizId,
+      question.questionBankId,
     );
   }
   async validateChoiceQuestionReadAccess(
@@ -111,10 +111,10 @@ export class ChoiceService {
     questionId: string,
   ) {
     const question = await this.questionService.findOrThrow(questionId);
-    await this.questionService.validateQuestionReadAccess(
+    await this.questionService.validateQuestionManagementAccess(
       userId,
       role,
-      question.quizId,
+      question.questionBankId,
     );
   }
   private async checkIfTheAllowedCount(questionId: string) {

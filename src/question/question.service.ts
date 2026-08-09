@@ -8,40 +8,47 @@ import { UserRole } from '@prisma/client';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QuestionRepository } from './question.repo';
-import { QuizService } from 'src/quiz/quiz.service';
+import { QuestionBankService } from 'src/question-bank/question-bank.service';
 
 @Injectable()
 export class QuestionService {
   constructor(
     private readonly questionRepository: QuestionRepository,
-    private readonly quizService: QuizService,
+    private readonly questionBankService: QuestionBankService,
   ) {}
 
   async create(
     userId: string,
     role: UserRole,
     createQuestionDto: CreateQuestionDto,
-    quizId: string,
+    questionBankId: string,
   ) {
-    await this.validateQuestionManagementAccess(userId, role, quizId);
+    await this.validateQuestionManagementAccess(userId, role, questionBankId);
 
-    return this.questionRepository.create(createQuestionDto, quizId);
+    return this.questionRepository.create(createQuestionDto, questionBankId);
   }
 
   findAll() {
     return this.questionRepository.find();
   }
 
-  async findByQuizId(userId: string, role: UserRole, quizId: string) {
-    await this.validateQuestionReadAccess(userId, role, quizId);
-
-    return this.questionRepository.findByQuizId(quizId);
+  async findByQuestionBankId(
+    userId: string,
+    role: UserRole,
+    questionBankId: string,
+  ) {
+    await this.validateQuestionManagementAccess(userId, role, questionBankId);
+    return this.questionRepository.findByQuestionBankId(questionBankId);
   }
 
   async findOne(id: string, userId: string, role: UserRole) {
     const question = await this.findOrThrow(id);
 
-    await this.validateQuestionReadAccess(userId, role, question.quizId);
+    await this.validateQuestionManagementAccess(
+      userId,
+      role,
+      question.questionBankId,
+    );
 
     return question;
   }
@@ -54,7 +61,11 @@ export class QuestionService {
   ) {
     const question = await this.findOrThrow(id);
 
-    await this.validateQuestionManagementAccess(userId, role, question.quizId);
+    await this.validateQuestionManagementAccess(
+      userId,
+      role,
+      question.questionBankId,
+    );
 
     return this.questionRepository.update(id, updateQuestionDto);
   }
@@ -62,7 +73,11 @@ export class QuestionService {
   async remove(id: string, userId: string, role: UserRole) {
     const question = await this.findOrThrow(id);
 
-    await this.validateQuestionManagementAccess(userId, role, question.quizId);
+    await this.validateQuestionManagementAccess(
+      userId,
+      role,
+      question.questionBankId,
+    );
 
     return this.questionRepository.delete(id);
   }
@@ -80,7 +95,7 @@ export class QuestionService {
   async validateQuestionManagementAccess(
     userId: string,
     role: UserRole,
-    quizId: string,
+    questionBankId: string,
   ) {
     if (role !== UserRole.admin && role !== UserRole.instructor) {
       throw new ForbiddenException(
@@ -88,26 +103,11 @@ export class QuestionService {
       );
     }
 
-    const quiz = await this.quizService.findOrThrow(quizId);
-
-    await this.quizService.validateQuizManagementAccess(
+    const bank = await this.questionBankService.findOrThrow(questionBankId);
+    await this.questionBankService.validateManagementAccess(
       userId,
       role,
-      quiz.lessonId,
-    );
-  }
-
-  async validateQuestionReadAccess(
-    userId: string,
-    role: UserRole,
-    quizId: string,
-  ) {
-    const quiz = await this.quizService.findOrThrow(quizId);
-
-    await this.quizService.validateQuizReadAccessByLesson(
-      userId,
-      role,
-      quiz.lessonId,
+      bank.courseId,
     );
   }
 }

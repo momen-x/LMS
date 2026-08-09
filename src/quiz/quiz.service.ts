@@ -1,45 +1,54 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { QuizRepository } from './quiz.repo';
-import { LessonService } from 'src/lesson/lesson.service';
 import { SectionService } from 'src/section/section.service';
+import { QuestionBankService } from 'src/question-bank/question-bank.service';
 
 @Injectable()
 export class QuizService {
   constructor(
     private readonly quizRepository: QuizRepository,
-    private readonly lessonService: LessonService,
     private readonly sectionService: SectionService,
+    private readonly questionBankService: QuestionBankService,
   ) {}
 
   async create(
     userId: string,
     role: UserRole,
     createQuizDto: CreateQuizDto,
-    lessonId: string,
+    courseId: string,
   ) {
-    await this.validateQuizManagementAccess(userId, role, lessonId);
-
-    return this.quizRepository.create(createQuizDto, lessonId);
+    await this.validateQuizManagementAccess(userId, role, courseId);
+    await this.validateQuestionBankSelection(
+      courseId,
+      createQuizDto.questionBankId,
+      createQuizDto.questionCount,
+    );
+    return this.quizRepository.create(createQuizDto, courseId);
   }
 
   findAll() {
     return this.quizRepository.find();
   }
 
-  async findByLessonId(userId: string, role: UserRole, lessonId: string) {
-    await this.validateQuizReadAccessByLesson(userId, role, lessonId);
+  async findByCourseId(userId: string, role: UserRole, courseId: string) {
+    await this.validateQuizReadAccess(userId, role, courseId);
 
-    return this.quizRepository.findByLessonId(lessonId);
+    return this.quizRepository.findByCourseId(courseId);
   }
 
   async findOne(id: string, userId: string, role: UserRole) {
     const quiz = await this.findOrThrow(id);
 
-    await this.validateQuizReadAccessByLesson(userId, role, quiz.lessonId);
+    await this.validateQuizReadAccess(userId, role, quiz.courseId);
 
     return quiz;
   }
@@ -52,7 +61,15 @@ export class QuizService {
   ) {
     const quiz = await this.findOrThrow(id);
 
-    await this.validateQuizManagementAccess(userId, role, quiz.lessonId);
+    await this.validateQuizManagementAccess(userId, role, quiz.courseId);
+
+    const questionBankId = updateQuizDto.questionBankId ?? quiz.questionBankId;
+    const questionCount = updateQuizDto.questionCount ?? quiz.questionCount;
+    await this.validateQuestionBankSelection(
+      quiz.courseId,
+      questionBankId,
+      questionCount,
+    );
 
     return this.quizRepository.update(id, updateQuizDto);
   }
@@ -60,7 +77,7 @@ export class QuizService {
   async remove(id: string, userId: string, role: UserRole) {
     const quiz = await this.findOrThrow(id);
 
-    await this.validateQuizManagementAccess(userId, role, quiz.lessonId);
+    await this.validateQuizManagementAccess(userId, role, quiz.courseId);
 
     return this.quizRepository.remove(id);
   }
@@ -78,28 +95,40 @@ export class QuizService {
   async validateQuizManagementAccess(
     userId: string,
     role: UserRole,
-    lessonId: string,
+    courseId: string,
   ) {
-    const lesson = await this.lessonService.findOrThrow(lessonId);
-
     await this.sectionService.validateCourseManagementAccess(
       userId,
       role,
-      lesson.section.courseId,
+      courseId,
     );
   }
 
-  async validateQuizReadAccessByLesson(
+  async validateQuizReadAccess(
     userId: string,
     role: UserRole,
-    lessonId: string,
+    courseId: string,
   ) {
-    const lesson = await this.lessonService.findOrThrow(lessonId);
+    await this.sectionService.validateCourseAccess(userId, role, courseId);
+  }
 
-    await this.sectionService.validateCourseAccess(
-      userId,
-      role,
-      lesson.section.courseId,
-    );
+  private async validateQuestionBankSelection(
+    courseId: string,
+    questionBankId: string,
+    questionCount: number,
+  ) {
+    const bank = await this.questionBankService.findOrThrow(questionBankId);
+    if (bank.courseId !== courseId) {
+      throw new BadRequestException(
+        'Question bank must belong to the same course as the quiz',
+      );
+    }
+    const available =
+      await this.questionBankService.countQuestions(questionBankId);
+    if (questionCount > available) {
+      throw new BadRequestException(
+        'questionCount cannot exceed the number of questions in the question bank',
+      );
+    }
   }
 }

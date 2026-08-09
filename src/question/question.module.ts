@@ -3,11 +3,11 @@ import { QuestionService } from './question.service';
 import { QuestionController } from './question.controller';
 import { QuestionRepository } from './question.repo';
 import { PrismaQuestionRepository } from './question-prisma.repo';
-import { QuizModule } from 'src/quiz/quiz.module';
-import { QuizQuestionsController } from './quiz-question.controller';
+import { QuestionBankModule } from 'src/question-bank/question-bank.module';
+import { QuestionBankQuestionsController } from './quiz-question.controller';
 
 @Module({
-  controllers: [QuestionController, QuizQuestionsController],
+  controllers: [QuestionController, QuestionBankQuestionsController],
   providers: [
     QuestionService,
     {
@@ -15,7 +15,7 @@ import { QuizQuestionsController } from './quiz-question.controller';
       useClass: PrismaQuestionRepository,
     },
   ],
-  imports: [QuizModule],
+  imports: [QuestionBankModule],
   exports: [QuestionService],
 })
 export class QuestionModule {}

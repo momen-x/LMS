@@ -8,9 +8,9 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 @Injectable()
 export class PrismaQuestionRepository implements QuestionRepository {
   constructor(private readonly prisma: PrismaService) {}
-  create(data: CreateQuestionDto, quizId: string): Promise<Question> {
+  create(data: CreateQuestionDto, questionBankId: string): Promise<Question> {
     return this.prisma.question.create({
-      data: { ...data, quizId },
+      data: { ...data, questionBankId },
     });
   }
   find(): Promise<Question[]> {
@@ -19,8 +19,8 @@ export class PrismaQuestionRepository implements QuestionRepository {
   findOne(id: string): Promise<Question | null> {
     return this.prisma.question.findUnique({ where: { id } });
   }
-  findByQuizId(quizId: string): Promise<Question[]> {
-    return this.prisma.question.findMany({ where: { quizId } });
+  findByQuestionBankId(questionBankId: string): Promise<Question[]> {
+    return this.prisma.question.findMany({ where: { questionBankId } });
   }
   update(id: string, question: UpdateQuestionDto): Promise<Question> {
     return this.prisma.question.update({ where: { id }, data: question });

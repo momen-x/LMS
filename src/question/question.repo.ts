@@ -7,10 +7,10 @@ import {
 export abstract class QuestionRepository {
   abstract find(): Promise<Question[]>;
   abstract findOne(id: string): Promise<Question | null>;
-  abstract findByQuizId(quizId: string): Promise<Question[]>;
+  abstract findByQuestionBankId(questionBankId: string): Promise<Question[]>;
   abstract create(
     question: CreateQuestionInputs,
-    quizId: string,
+    questionBankId: string,
   ): Promise<Question>;
   abstract update(
     id: string,

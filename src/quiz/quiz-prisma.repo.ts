@@ -7,11 +7,11 @@ import { CreateQUizInputs, UpdateQuizInputs } from './types/quiz.type';
 @Injectable()
 export class PrismaQuizRepository implements QuizRepository {
   constructor(private readonly prisma: PrismaService) {}
-  create(dto: CreateQUizInputs, lessonId: string): Promise<Quiz> {
+  create(dto: CreateQUizInputs, courseId: string): Promise<Quiz> {
     return this.prisma.quiz.create({
       data: {
         ...dto,
-        lessonId,
+        courseId,
       },
     });
   }
@@ -25,10 +25,10 @@ export class PrismaQuizRepository implements QuizRepository {
       },
     });
   }
-  findByLessonId(lessonId: string): Promise<Quiz[]> {
+  findByCourseId(courseId: string): Promise<Quiz[]> {
     return this.prisma.quiz.findMany({
       where: {
-        lessonId,
+        courseId,
       },
     });
   }

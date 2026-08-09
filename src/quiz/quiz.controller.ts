@@ -22,7 +22,7 @@ export class QuizController {
 
   @Get()
   @ApiResponse({ status: 200, description: 'get all quizzes' })
-  @ApiOperation({ summary: 'get all questions' })
+  @ApiOperation({ summary: 'Get all quizzes' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.admin)
   findAll() {

@@ -5,8 +5,8 @@ import { Quiz } from './entities/quiz.entity';
 export abstract class QuizRepository {
   abstract find(): Promise<Quiz[]>;
   abstract findOne(id: string): Promise<Quiz | null>;
-  abstract findByLessonId(lessonId: string): Promise<Quiz[]>;
-  abstract create(dto: CreateQuizDto, lessonId: string): Promise<Quiz>;
+  abstract findByCourseId(courseId: string): Promise<Quiz[]>;
+  abstract create(dto: CreateQuizDto, courseId: string): Promise<Quiz>;
   abstract update(id: string, dto: UpdateQuizDto): Promise<Quiz>;
   abstract remove(id: string): Promise<Quiz>;
 }

@@ -15,7 +15,7 @@ import { MediaModule } from './media/media.module';
 import { QuizModule } from './quiz/quiz.module';
 import { QuestionModule } from './question/question.module';
 import { ChoiceModule } from './choice/choice.module';
-import { StudentAnswerModule } from './student-answer/student-answer.module';
+import { QuestionBankModule } from './question-bank/question-bank.module';
 import { PaymentModule } from './payment/payment.module';
 import { EnrollmentModule } from './enrollment/enrollment.module';
 import { CertificateModule } from './certificate/certificate.module';
@@ -41,7 +41,7 @@ import { QuizAttemptModule } from './quiz-attempt/quiz-attempt.module';
     QuizModule,
     QuestionModule,
     ChoiceModule,
-    StudentAnswerModule,
+    QuestionBankModule,
     PaymentModule,
     EnrollmentModule,
     CertificateModule,
