@@ -1,172 +1,187 @@
-import { Injectable } from '@nestjs/common';
-import { QuizAttemptStatus, StudentAnswer } from '@prisma/client';
-
-import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
-import { QuizAttemptRepository } from './quiz-attempt.repo';
-import { QuizAttempt } from './entities/quiz-attempt.entity';
-import { AttemptAnswerResult } from './types/attempt-answer-result.type';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  Prisma,
+  QuizAttempt,
+  QuizAttemptAnswer,
+  QuizAttemptStatus,
+} from '@prisma/client';
 import { syncEnrollmentProgress } from 'src/enrollment/enrollment-progress';
+import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
+import { QuizAttemptRepository, StudentAttemptView } from './quiz-attempt.repo';
+
+const studentViewInclude = {
+  quiz: { select: { id: true, passingScore: true } },
+  questions: {
+    orderBy: { order: 'asc' as const },
+    select: {
+      order: true,
+      question: {
+        select: {
+          id: true,
+          text: true,
+          choices: { select: { id: true, text: true } },
+        },
+      },
+    },
+  },
+  answers: { select: { questionId: true, choiceId: true } },
+};
 
 @Injectable()
 export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(
+  createWithRandomQuestions(
     studentId: string,
     quizId: string,
-    attemptNumber: number,
-  ): Promise<QuizAttempt> {
-    return this.prisma.quizAttempt.create({
-      data: {
-        studentId,
-        quizId,
-        attemptNumber,
+  ): Promise<StudentAttemptView> {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const quiz = await tx.quiz.findUniqueOrThrow({ where: { id: quizId } });
+        const attemptNumber =
+          (await tx.quizAttempt.count({ where: { studentId, quizId } })) + 1;
+        if (attemptNumber > quiz.maxAttempts)
+          throw new BadRequestException(
+            'You have reached the maximum number of attempts',
+          );
+        const candidates = await tx.question.findMany({
+          where: { questionBankId: quiz.questionBankId },
+          select: { id: true },
+        });
+        if (candidates.length < quiz.questionCount)
+          throw new BadRequestException(
+            'The question bank does not contain enough questions',
+          );
+        const selected = [...candidates]
+          .sort(() => Math.random() - 0.5)
+          .slice(0, quiz.questionCount);
+        return tx.quizAttempt.create({
+          data: {
+            studentId,
+            quizId,
+            attemptNumber,
+            questions: {
+              create: selected.map((question, index) => ({
+                questionId: question.id,
+                order: index + 1,
+              })),
+            },
+          },
+          include: studentViewInclude,
+        });
       },
-    });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
-
   findOne(id: string): Promise<QuizAttempt | null> {
+    return this.prisma.quizAttempt.findUnique({ where: { id } });
+  }
+  findStudentView(id: string): Promise<StudentAttemptView | null> {
     return this.prisma.quizAttempt.findUnique({
       where: { id },
+      include: studentViewInclude,
     });
   }
-
   findActiveAttempt(
     studentId: string,
     quizId: string,
-  ): Promise<QuizAttempt | null> {
+  ): Promise<StudentAttemptView | null> {
     return this.prisma.quizAttempt.findFirst({
-      where: {
-        studentId,
-        quizId,
-        status: QuizAttemptStatus.in_progress,
-      },
+      where: { studentId, quizId, status: QuizAttemptStatus.in_progress },
+      include: studentViewInclude,
     });
   }
-
   countStudentAttempts(studentId: string, quizId: string): Promise<number> {
-    return this.prisma.quizAttempt.count({
-      where: {
-        studentId,
-        quizId,
-      },
-    });
+    return this.prisma.quizAttempt.count({ where: { studentId, quizId } });
   }
-
+  async isQuestionAssigned(
+    attemptId: string,
+    questionId: string,
+  ): Promise<boolean> {
+    return (
+      (await this.prisma.quizAttemptQuestion.count({
+        where: { attemptId, questionId },
+      })) > 0
+    );
+  }
+  async choiceBelongsToQuestion(
+    choiceId: string,
+    questionId: string,
+  ): Promise<boolean> {
+    return (
+      (await this.prisma.choice.count({
+        where: { id: choiceId, questionId },
+      })) > 0
+    );
+  }
   saveAnswer(
     attemptId: string,
     questionId: string,
     choiceId: string,
-  ): Promise<StudentAnswer> {
-    return this.prisma.studentAnswer.upsert({
-      where: {
-        attemptId_questionId: {
-          attemptId,
-          questionId,
-        },
-      },
-      update: {
-        choiceId,
-      },
-      create: {
-        attemptId,
-        questionId,
-        choiceId,
-      },
+  ): Promise<QuizAttemptAnswer> {
+    return this.prisma.quizAttemptAnswer.upsert({
+      where: { attemptId_questionId: { attemptId, questionId } },
+      update: { choiceId },
+      create: { attemptId, questionId, choiceId },
     });
   }
-
-  findAnswers(attemptId: string) {
-    return this.prisma.studentAnswer.findMany({
-      where: {
-        attemptId,
-      },
-      include: {
-        choice: {
-          select: {
-            isCorrect: true,
-          },
-        },
-      },
-    });
-  }
-
-  countQuizQuestions(quizId: string): Promise<number> {
-    return this.prisma.question.count({
-      where: {
-        quizId,
-      },
-    });
-  }
-
-  submit(
-    id: string,
-    data: {
-      status: QuizAttemptStatus;
-      score: number;
-      correctAnswers: number;
-      totalQuestions: number;
-      submittedAt: Date;
-    },
-  ): Promise<QuizAttempt> {
-    return this.prisma.$transaction(async (transaction) => {
-      const attempt = await transaction.quizAttempt.update({
+  submit(id: string): Promise<QuizAttempt> {
+    return this.prisma.$transaction(async (tx) => {
+      const attempt = await tx.quizAttempt.findUniqueOrThrow({
         where: { id },
-        data,
-      });
-      const quiz = await transaction.quiz.findUniqueOrThrow({
-        where: { id: attempt.quizId },
-        select: {
-          lesson: {
-            select: {
-              section: {
-                select: { courseId: true },
-              },
-            },
+        include: {
+          questions: true,
+          answers: { include: { choice: { select: { isCorrect: true } } } },
+          quiz: {
+            select: { courseId: true },
           },
         },
       });
-      const enrollment = await transaction.enrollment.findUnique({
+      if (attempt.status !== QuizAttemptStatus.in_progress)
+        throw new BadRequestException(
+          'This quiz attempt has already been submitted',
+        );
+      const totalQuestions = attempt.questions.length;
+      if (!totalQuestions)
+        throw new BadRequestException(
+          'This attempt does not contain any questions',
+        );
+      const assigned = new Set(
+        attempt.questions.map((item) => item.questionId),
+      );
+      const correctAnswers = attempt.answers.filter(
+        (answer) => assigned.has(answer.questionId) && answer.choice.isCorrect,
+      ).length;
+      const updated = await tx.quizAttempt.update({
+        where: { id },
+        data: {
+          status: QuizAttemptStatus.submitted,
+          score: (correctAnswers / totalQuestions) * 100,
+          correctAnswers,
+          totalQuestions,
+          submittedAt: new Date(),
+        },
+      });
+      const enrollment = await tx.enrollment.findUnique({
         where: {
           studentId_courseId: {
             studentId: attempt.studentId,
-            courseId: quiz.lesson.section.courseId,
+            courseId: attempt.quiz.courseId,
           },
         },
         select: { id: true },
       });
-      if (enrollment) {
-        await syncEnrollmentProgress(transaction, enrollment.id);
-      }
-      return attempt;
+      if (enrollment) await syncEnrollmentProgress(tx, enrollment.id);
+      return updated;
     });
   }
-
   findByStudentAndQuiz(
     studentId: string,
     quizId: string,
   ): Promise<QuizAttempt[]> {
     return this.prisma.quizAttempt.findMany({
-      where: {
-        studentId,
-        quizId,
-      },
-      orderBy: {
-        attemptNumber: 'desc',
-      },
-    });
-  }
-  async findAnswersByAttemptId(
-    attemptId: string,
-  ): Promise<AttemptAnswerResult[]> {
-    return this.prisma.studentAnswer.findMany({
-      where: {
-        attemptId,
-      },
-      select: {
-        questionId: true,
-        choiceId: true,
-      },
+      where: { studentId, quizId },
+      orderBy: { attemptNumber: 'desc' },
     });
   }
 }

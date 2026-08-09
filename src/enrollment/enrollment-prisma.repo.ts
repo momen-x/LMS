@@ -72,6 +72,13 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
     studentId: string,
     courseId: string,
   ): Promise<Enrollment | null> {
+    return this.findByStudentAndCourseOrNull(studentId, courseId);
+  }
+
+  findByStudentAndCourseOrNull(
+    studentId: string,
+    courseId: string,
+  ): Promise<Enrollment | null> {
     return this.prisma.enrollment.findUnique({
       where: {
         studentId_courseId: { studentId, courseId },

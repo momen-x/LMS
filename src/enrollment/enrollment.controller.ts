@@ -20,7 +20,9 @@ import { EnrollmentService } from './enrollment.service';
 @Controller('enrollments')
 export class EnrollmentController {
   constructor(private readonly enrollmentService: EnrollmentService) {}
-
+  /**
+   * @returns user enrollment with courses and instructors
+   */
   @Get('me')
   @ApiOperation({
     summary: 'Get current user enrollments',
@@ -46,6 +48,9 @@ export class EnrollmentController {
   ) {
     return this.enrollmentService.findUserEnrollments(user.sub, courseId);
   }
+  /**
+   * @returns { totalCourses: number; completedCourses: number, inProgressCourses: number; averageProgress: number;}
+   */
   @Get('me/stats')
   @UseGuards(JwtAuthGuard)
   getMyStats(
@@ -105,7 +110,16 @@ export class EnrollmentController {
 
     return this.enrollmentService.findOne(id);
   }
-
+  @Get('me/enrolled/:courseId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async findIsStudentEnrollment(
+    @Param('courseId') courseId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return {
+      isEnrollment: await this.enrollmentService.isEnrolled(user.sub, courseId),
+    };
+  }
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.admin, UserRole.instructor)

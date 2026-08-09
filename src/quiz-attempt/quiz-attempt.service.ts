@@ -5,169 +5,113 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { QuizAttemptStatus, UserRole } from '@prisma/client';
-
-import { QuizAttemptRepository } from './quiz-attempt.repo';
 import { QuizService } from 'src/quiz/quiz.service';
-import { QuestionService } from 'src/question/question.service';
-import { ChoiceService } from 'src/choice/choice.service';
 import { SaveAttemptAnswerDto } from './dto/create-quiz-attempt.dto';
+import { QuizAttemptRepository, StudentAttemptView } from './quiz-attempt.repo';
 
 @Injectable()
 export class QuizAttemptService {
   constructor(
-    private readonly quizAttemptRepo: QuizAttemptRepository,
+    private readonly repo: QuizAttemptRepository,
     private readonly quizService: QuizService,
-    private readonly questionService: QuestionService,
-    private readonly choiceService: ChoiceService,
   ) {}
 
   async startAttempt(userId: string, role: UserRole, quizId: string) {
     this.validateStudentRole(role);
-
     const quiz = await this.quizService.findOrThrow(quizId);
-
-    await this.quizService.validateQuizReadAccessByLesson(
-      userId,
-      role,
-      quiz.lessonId,
-    );
-
-    const activeAttempt = await this.quizAttemptRepo.findActiveAttempt(
-      userId,
-      quizId,
-    );
-
-    if (activeAttempt) {
-      return activeAttempt;
-    }
-
-    const attemptsCount = await this.quizAttemptRepo.countStudentAttempts(
-      userId,
-      quizId,
-    );
-
-    if (attemptsCount >= quiz.maxAttempts) {
+    await this.quizService.validateQuizReadAccess(userId, role, quiz.courseId);
+    const active = await this.repo.findActiveAttempt(userId, quizId);
+    if (active) return this.mapStudentView(active);
+    if (
+      (await this.repo.countStudentAttempts(userId, quizId)) >= quiz.maxAttempts
+    )
       throw new BadRequestException(
         'You have reached the maximum number of attempts',
       );
-    }
+    return this.mapStudentView(
+      await this.repo.createWithRandomQuestions(userId, quizId),
+    );
+  }
 
-    return this.quizAttemptRepo.create(userId, quizId, attemptsCount + 1);
+  async getAttempt(attemptId: string, userId: string, role: UserRole) {
+    this.validateStudentRole(role);
+    const attempt = await this.repo.findStudentView(attemptId);
+    if (!attempt) throw new NotFoundException('Quiz attempt not found');
+    this.validateAttemptOwnership(attempt.studentId, userId);
+    return this.mapStudentView(attempt);
   }
 
   async saveAnswer(
     attemptId: string,
+    questionId: string,
     userId: string,
     role: UserRole,
     dto: SaveAttemptAnswerDto,
   ) {
     this.validateStudentRole(role);
-
     const attempt = await this.findOrThrow(attemptId);
-
     this.validateAttemptOwnership(attempt.studentId, userId);
-
     this.validateAttemptIsActive(attempt.status);
-
-    const question = await this.questionService.findOrThrow(dto.questionId);
-
-    if (question.quizId !== attempt.quizId) {
+    if (!(await this.repo.isQuestionAssigned(attemptId, questionId)))
       throw new BadRequestException(
-        'This question does not belong to the attempt quiz',
+        'This question is not assigned to this attempt',
       );
-    }
-
-    const choice = await this.choiceService.findOrThrow(dto.choiceId);
-
-    if (choice.questionId !== question.id) {
+    if (!(await this.repo.choiceBelongsToQuestion(dto.choiceId, questionId)))
       throw new BadRequestException(
         'This choice does not belong to this question',
       );
-    }
-
-    return this.quizAttemptRepo.saveAnswer(attempt.id, question.id, choice.id);
+    return this.repo.saveAnswer(attemptId, questionId, dto.choiceId);
   }
 
   async submitAttempt(attemptId: string, userId: string, role: UserRole) {
     this.validateStudentRole(role);
-
     const attempt = await this.findOrThrow(attemptId);
-
     this.validateAttemptOwnership(attempt.studentId, userId);
-
     this.validateAttemptIsActive(attempt.status);
-
-    const totalQuestions = await this.quizAttemptRepo.countQuizQuestions(
-      attempt.quizId,
-    );
-
-    if (totalQuestions === 0) {
-      throw new BadRequestException('This quiz does not contain any questions');
-    }
-
-    const answers = await this.quizAttemptRepo.findAnswers(attempt.id);
-
-    const correctAnswers = answers.filter(
-      (answer) => answer.choice.isCorrect,
-    ).length;
-
-    const score = (correctAnswers / totalQuestions) * 100;
-
-    return this.quizAttemptRepo.submit(attempt.id, {
-      status: QuizAttemptStatus.submitted,
-      score,
-      correctAnswers,
-      totalQuestions,
-      submittedAt: new Date(),
-    });
+    return this.repo.submit(attemptId);
   }
-
   async findMyAttempts(userId: string, role: UserRole, quizId: string) {
     this.validateStudentRole(role);
-
-    return this.quizAttemptRepo.findByStudentAndQuiz(userId, quizId);
+    return this.repo.findByStudentAndQuiz(userId, quizId);
   }
-
   async findOrThrow(id: string) {
-    const attempt = await this.quizAttemptRepo.findOne(id);
-
-    if (!attempt) {
-      throw new NotFoundException('Quiz attempt not found');
-    }
-
+    const attempt = await this.repo.findOne(id);
+    if (!attempt) throw new NotFoundException('Quiz attempt not found');
     return attempt;
   }
-
   private validateStudentRole(role: UserRole) {
-    if (role !== UserRole.student) {
+    if (role !== UserRole.student)
       throw new ForbiddenException('Only students can perform this action');
-    }
   }
-
-  private validateAttemptOwnership(attemptUserId: string, userId: string) {
-    if (attemptUserId !== userId) {
+  private validateAttemptOwnership(ownerId: string, userId: string) {
+    if (ownerId !== userId)
       throw new ForbiddenException(
         'You do not have access to this quiz attempt',
       );
-    }
   }
-
   private validateAttemptIsActive(status: QuizAttemptStatus) {
-    if (status !== QuizAttemptStatus.in_progress) {
+    if (status !== QuizAttemptStatus.in_progress)
       throw new BadRequestException(
         'This quiz attempt has already been submitted',
       );
-    }
   }
-  async getAttemptAnswers(attemptId: string, studentId: string) {
-    const attempt = await this.findOrThrow(attemptId);
-
-    if (attempt.studentId !== studentId) {
-      throw new ForbiddenException(
-        'You are not allowed to access this quiz attempt',
-      );
-    }
-
-    return this.quizAttemptRepo.findAnswersByAttemptId(attemptId);
+  private mapStudentView(attempt: StudentAttemptView) {
+    const selected = new Map(
+      attempt.answers.map((answer) => [answer.questionId, answer.choiceId]),
+    );
+    return {
+      attemptId: attempt.id,
+      quizId: attempt.quizId,
+      attemptNumber: attempt.attemptNumber,
+      status: attempt.status,
+      startedAt: attempt.startedAt,
+      questions: attempt.questions.map(({ order, question }) => ({
+        id: question.id,
+        text: question.text,
+        order,
+        choices: question.choices,
+        selectedChoiceId: selected.get(question.id) ?? null,
+      })),
+    };
   }
 }

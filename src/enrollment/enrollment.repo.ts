@@ -22,6 +22,10 @@ export abstract class EnrollmentRepository {
     studentId: string,
     courseId: string,
   ): Promise<Enrollment | null>;
+  abstract findByStudentAndCourseOrNull(
+    studentId: string,
+    courseId: string,
+  ): Promise<Enrollment | null>;
   abstract findOne(id: string): Promise<Enrollment | null>;
   abstract hasCompletedPayment(
     studentId: string,

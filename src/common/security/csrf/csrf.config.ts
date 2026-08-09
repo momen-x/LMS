@@ -91,7 +91,7 @@ export function createCsrfConfig(
     }
 
     const path = req.path.replace(/^\/api/, '');
-    if (path === '/payment/webhook') {
+    if (path === '/payment/webhook' || path === '/payments/webhook') {
       return true;
     }
 

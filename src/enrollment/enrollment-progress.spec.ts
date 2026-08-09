@@ -142,4 +142,18 @@ describe('enrollment progress synchronization', () => {
       hasPassedAllCourseQuizzes(transactionClient, 'student-1', 'course-1'),
     ).resolves.toBe(true);
   });
+
+  it('finds all required quizzes directly by courseId', async () => {
+    const { transaction, transactionClient } = setup({ quizScore: 80 });
+
+    await hasPassedAllCourseQuizzes(
+      transactionClient,
+      'student-1',
+      'course-1',
+    );
+
+    expect(transaction.quiz.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { courseId: 'course-1' } }),
+    );
+  });
 });

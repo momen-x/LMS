@@ -2,49 +2,43 @@ import { QuizAttemptStatus } from '@prisma/client';
 import { PrismaQuizAttemptRepository } from './quiz-attempt-prisma.repo';
 
 describe('PrismaQuizAttemptRepository', () => {
-  it('submits the attempt and locates its enrollment in one transaction', async () => {
-    const attempt = {
+  it('scores only assigned answers and synchronizes the enrollment transactionally', async () => {
+    const submitted = {
       id: 'attempt-1',
       studentId: 'student-1',
       quizId: 'quiz-1',
-      attemptNumber: 1,
-      status: QuizAttemptStatus.submitted,
-      score: 80,
-      correctAnswers: 4,
-      totalQuestions: 5,
-      startedAt: new Date(),
-      submittedAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
     const transaction = {
-      quizAttempt: { update: jest.fn().mockResolvedValue(attempt) },
-      quiz: {
+      quizAttempt: {
         findUniqueOrThrow: jest.fn().mockResolvedValue({
-          lesson: { section: { courseId: 'course-1' } },
+          ...submitted,
+          status: QuizAttemptStatus.in_progress,
+          questions: [{ questionId: 'q1' }, { questionId: 'q2' }],
+          answers: [
+            { questionId: 'q1', choice: { isCorrect: true } },
+            { questionId: 'q2', choice: { isCorrect: false } },
+          ],
+          quiz: { courseId: 'course-1' },
         }),
+        update: jest.fn().mockResolvedValue(submitted),
       },
       enrollment: { findUnique: jest.fn().mockResolvedValue(null) },
     };
     const prisma = {
-      $transaction: jest.fn(
-        async (callback: (tx: typeof transaction) => Promise<unknown>) =>
-          callback(transaction),
-      ),
+      $transaction: jest.fn((callback) => callback(transaction)),
     };
     const repository = new PrismaQuizAttemptRepository(prisma as never);
-    const submittedAt = new Date();
 
-    await expect(
-      repository.submit('attempt-1', {
+    await expect(repository.submit('attempt-1')).resolves.toBe(submitted);
+    expect(transaction.quizAttempt.update).toHaveBeenCalledWith({
+      where: { id: 'attempt-1' },
+      data: expect.objectContaining({
         status: QuizAttemptStatus.submitted,
-        score: 80,
-        correctAnswers: 4,
-        totalQuestions: 5,
-        submittedAt,
+        score: 50,
+        correctAnswers: 1,
+        totalQuestions: 2,
       }),
-    ).resolves.toBe(attempt);
-
+    });
     expect(transaction.enrollment.findUnique).toHaveBeenCalledWith({
       where: {
         studentId_courseId: {

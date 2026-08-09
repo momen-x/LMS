@@ -59,12 +59,18 @@ export class EnrollmentService {
     return this.enrollmentRepository.findCourseStudent(courseId);
   }
   async findByStudentAndCourse(studentId: string, courseId: string) {
-    const enrollment = await this.enrollmentRepository.findByStudentAndCourse(
+    const enrollment = await this.findByStudentAndCourseOrNull(
       studentId,
       courseId,
     );
     if (!enrollment) throw new NotFoundException('Enrollment not found');
     return enrollment;
+  }
+  findByStudentAndCourseOrNull(studentId: string, courseId: string) {
+    return this.enrollmentRepository.findByStudentAndCourseOrNull(
+      studentId,
+      courseId,
+    );
   }
 
   findOne(id: string) {
@@ -188,11 +194,10 @@ export class EnrollmentService {
     return enrollment;
   }
   async isEnrolled(studentId: string, courseId: string): Promise<boolean> {
-    const enrollment = await this.enrollmentRepository.findByStudentAndCourse(
+    const enrollment = await this.findByStudentAndCourseOrNull(
       studentId,
       courseId,
     );
-
     return Boolean(enrollment);
   }
 }

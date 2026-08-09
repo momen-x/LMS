@@ -1,13 +1,27 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { CourseService } from 'src/course/course.service';
 import { PaymentRepository } from './payment.repo';
-import { NotificationType, PaymentStatus, Prisma } from '@prisma/client';
+import { PaymentStatus, Prisma } from '@prisma/client';
 import type { Request } from 'express';
 import { EnrollmentService } from 'src/enrollment/enrollment.service';
-import { NotificationsService } from 'src/notification/notification.service';
+
+export type CheckoutSessionStatus = {
+  status: 'pending' | 'completed' | 'failed' | 'expired';
+  courseId: string;
+  isEnrollment: boolean;
+  amount?: Prisma.Decimal;
+  currency?: string;
+};
 
 @Injectable()
 export class PaymentService {
@@ -20,7 +34,6 @@ export class PaymentService {
     private readonly paymentRepo: PaymentRepository,
     private readonly courseService: CourseService,
     private readonly enrollmentService: EnrollmentService,
-    private readonly notificationsService: NotificationsService,
   ) {
     this.stripe = new Stripe(this.config.getOrThrow('STRIPE_SECRET_KEY'));
     this.FRONTEND_URL = this.config.getOrThrow('FRONTEND_URL');
@@ -28,10 +41,13 @@ export class PaymentService {
   }
   async create(userId: string, courseId: string) {
     const course = await this.courseService.findOne(courseId);
+    //user must enrollment for the course, even if it is free, in order for the system (back-end ) to track progress, complete the course, and generate certificates.
+
     if (Number(course.price) === 0) {
-      throw new BadRequestException(
-        'This course is free and does not require payment',
-      );
+      return await this.enrollmentService.create({
+        courseId,
+        studentId: userId,
+      });
     }
     await this.enrollmentService.validateEnrollmentCreation(userId, courseId);
 
@@ -45,13 +61,26 @@ export class PaymentService {
         const existingSession = await this.stripe.checkout.sessions.retrieve(
           existingPendingPayment.stripeSessionId,
         );
+        if (existingSession.payment_status === 'paid') {
+          const result =
+            await this.completePaidCheckoutSession(existingSession);
+          if (!result) {
+            throw new NotFoundException('Local payment not found');
+          }
+          return {
+            payment: result.payment,
+            status: 'completed' as const,
+            courseId,
+            isEnrollment: true,
+          };
+        }
         if (existingSession.status === 'open' && existingSession.url) {
           return {
             payment: existingPendingPayment,
             checkoutUrl: existingSession.url,
           };
         }
-        if (existingSession.status === PaymentStatus.expired) {
+        if (existingSession.status === 'expired') {
           await this.paymentRepo.markAsExpired(existingPendingPayment.id);
         } else {
           await this.paymentRepo.markAsFailed(existingPendingPayment.id);
@@ -83,8 +112,9 @@ export class PaymentService {
         },
       ],
       mode: 'payment',
-      success_url: `${this.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${this.FRONTEND_URL}/payment/cancel`,
+      client_reference_id: userId,
+      success_url: `${this.FRONTEND_URL}/payments/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${this.FRONTEND_URL}/payments/cancel`,
     });
 
     if (!session.url) {
@@ -102,6 +132,68 @@ export class PaymentService {
     return {
       payment,
       checkoutUrl: session.url,
+    };
+  }
+  async verifyCheckoutSession(
+    sessionId: string,
+    currentUserId: string,
+  ): Promise<CheckoutSessionStatus> {
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await this.stripe.checkout.sessions.retrieve(sessionId);
+    } catch (error) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: unknown }).code === 'resource_missing'
+      ) {
+        throw new NotFoundException('Checkout session not found');
+      }
+      throw error;
+    }
+
+    const { userId, courseId } = this.validatedMetadata(session);
+    if (
+      userId !== currentUserId ||
+      (session.client_reference_id &&
+        session.client_reference_id !== currentUserId)
+    ) {
+      throw new ForbiddenException(
+        'Checkout session does not belong to the current user',
+      );
+    }
+
+    const payment = await this.paymentRepo.findByStripeSessionId(session.id);
+    if (!payment) {
+      throw new NotFoundException('Local payment not found');
+    }
+    if (payment.studentId !== currentUserId || payment.courseId !== courseId) {
+      throw new ForbiddenException(
+        'Checkout session does not match the current user payment',
+      );
+    }
+
+    if (session.payment_status === 'paid') {
+      await this.completePaidCheckoutSession(session);
+    } else if (session.status === 'expired') {
+      await this.paymentRepo.markAsExpired(payment.id);
+    }
+
+    const isEnrollment = await this.enrollmentService.isEnrolled(
+      currentUserId,
+      courseId,
+    );
+    const status = this.checkoutStatus(session, payment.status, isEnrollment);
+    this.logger.log(
+      `Checkout verification status=${status} sessionId=${session.id} paymentId=${payment.id} studentId=${currentUserId} courseId=${courseId}`,
+    );
+    return {
+      status,
+      courseId,
+      isEnrollment,
+      amount: payment.amount,
+      currency: payment.currency,
     };
   }
   async handleWebhook(req: RawBodyRequest<Request>) {
@@ -151,49 +243,39 @@ export class PaymentService {
       return;
     }
 
+    await this.completePaidCheckoutSession(session);
+  }
+
+  private async completePaidCheckoutSession(session: Stripe.Checkout.Session) {
+    const { userId, courseId } = this.validatedMetadata(session);
     const stripePaymentId = this.paymentIntentId(session.payment_intent);
     if (!stripePaymentId) {
-      this.logger.error(
-        `Checkout session ${session.id} has no valid PaymentIntent ID`,
+      throw new BadRequestException(
+        'Paid checkout session has no valid PaymentIntent ID',
       );
-      return;
     }
-
     const payment = await this.paymentRepo.findByStripeSessionId(session.id);
     if (!payment) {
       this.logger.warn(
-        `No local payment found for Stripe session ${session.id}`,
+        `Ignoring paid Stripe session without a local payment sessionId=${session.id}`,
       );
-      return;
+      return null;
     }
-
-    await this.paymentRepo.completePaymentAndCreateEnrollment(
+    if (payment.studentId !== userId || payment.courseId !== courseId) {
+      throw new ForbiddenException(
+        'Checkout metadata does not match the local payment',
+      );
+    }
+    const result = await this.paymentRepo.completePaymentAndCreateEnrollment(
       payment.id,
-      payment.studentId,
-      payment.courseId,
+      userId,
+      courseId,
       stripePaymentId,
     );
-    if (payment.status !== PaymentStatus.completed) {
-      try {
-        const course = await this.courseService.findOne(payment.courseId);
-        await this.notificationsService.create({
-          userId: payment.studentId,
-          title: 'Enrollment successful',
-          text: `You have successfully enrolled in ${course.title}.`,
-          type: NotificationType.success,
-        });
-        await this.notificationsService.create({
-          userId: course.instructorId,
-          title: 'New enrollment',
-          text: `A student enrolled in ${course.title}.`,
-          type: NotificationType.info,
-        });
-      } catch (error) {
-        this.logger.warn(
-          `Payment ${payment.id} completed but its notification failed: ${this.errorMessage(error)}`,
-        );
-      }
-    }
+    this.logger.log(
+      `Payment completion completedNow=${result.completedNow} enrollmentCreated=${result.enrollmentCreated} sessionId=${session.id} paymentId=${payment.id} studentId=${userId} courseId=${courseId}`,
+    );
+    return result;
   }
   private async handleCheckoutExpired(session: Stripe.Checkout.Session) {
     const payment = await this.paymentRepo.findByStripeSessionId(session.id);
@@ -203,6 +285,9 @@ export class PaymentService {
     }
 
     await this.paymentRepo.markAsExpired(payment.id);
+    this.logger.log(
+      `Checkout expired sessionId=${session.id} paymentId=${payment.id} studentId=${payment.studentId} courseId=${payment.courseId}`,
+    );
   }
 
   private paymentIntentId(
@@ -220,6 +305,35 @@ export class PaymentService {
       return paymentIntent.id;
     }
     return null;
+  }
+
+  private validatedMetadata(session: Stripe.Checkout.Session) {
+    const userId = session.metadata?.userId?.trim();
+    const courseId = session.metadata?.courseId?.trim();
+    if (!userId || !courseId) {
+      throw new BadRequestException(
+        'Checkout session has invalid payment metadata',
+      );
+    }
+    return { userId, courseId };
+  }
+
+  private checkoutStatus(
+    session: Stripe.Checkout.Session,
+    localStatus: PaymentStatus,
+    isEnrollment: boolean,
+  ): CheckoutSessionStatus['status'] {
+    if (session.payment_status === 'paid' && isEnrollment) return 'completed';
+    if (session.status === 'expired' || localStatus === PaymentStatus.expired) {
+      return 'expired';
+    }
+    if (
+      localStatus === PaymentStatus.failed ||
+      (session.status === 'complete' && session.payment_status === 'unpaid')
+    ) {
+      return 'failed';
+    }
+    return 'pending';
   }
 
   private errorMessage(error: unknown): string {

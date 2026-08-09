@@ -1,6 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { Payment } from './entities/payment.entity';
 
+export type PaymentCompletionResult = {
+  payment: Payment;
+  enrollmentCreated: boolean;
+  completedNow: boolean;
+};
+
 export abstract class PaymentRepository {
   abstract create(
     studentId: string,
@@ -23,7 +29,7 @@ export abstract class PaymentRepository {
     studentId: string,
     courseId: string,
     stripePaymentId: string,
-  ): Promise<Payment>;
+  ): Promise<PaymentCompletionResult>;
   abstract markAsFailed(id: string): Promise<void>;
   abstract markAsExpired(id: string): Promise<void>;
 }

@@ -5,12 +5,10 @@ import { QuizAttemptService } from './quiz-attempt.service';
 import { QuizAttemptRepository } from './quiz-attempt.repo';
 
 import { QuizModule } from 'src/quiz/quiz.module';
-import { QuestionModule } from 'src/question/question.module';
-import { ChoiceModule } from 'src/choice/choice.module';
 import { PrismaQuizAttemptRepository } from './quiz-attempt-prisma.repo';
 
 @Module({
-  imports: [QuizModule, QuestionModule, ChoiceModule],
+  imports: [QuizModule],
   controllers: [QuizAttemptController],
   providers: [
     QuizAttemptService,

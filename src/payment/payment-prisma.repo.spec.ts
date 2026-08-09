@@ -2,15 +2,36 @@ import { PaymentStatus } from '@prisma/client';
 import { PrismaPaymentRepository } from './payment-prisma.repo';
 
 describe('PrismaPaymentRepository', () => {
-  it('completes payment and upserts enrollment in one transaction', async () => {
-    const payment = { id: 'payment-1', status: PaymentStatus.completed };
+  function setup(completedNow = true) {
+    const payment = {
+      id: 'payment-1',
+      studentId: 'user-1',
+      courseId: 'course-1',
+      status: PaymentStatus.completed,
+    };
     const transaction = {
-      payment: { update: jest.fn().mockResolvedValue(payment) },
+      payment: {
+        updateMany: jest
+          .fn()
+          .mockResolvedValue({ count: completedNow ? 1 : 0 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(payment),
+      },
       enrollment: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue(completedNow ? null : { id: 'enrollment-1' }),
         upsert: jest.fn().mockResolvedValue({}),
+        create: jest.fn().mockResolvedValue({}),
         count: jest.fn().mockResolvedValue(1),
       },
-      course: { update: jest.fn().mockResolvedValue({}) },
+      course: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          title: 'NestJS',
+          instructorId: 'instructor-1',
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      notification: { createMany: jest.fn().mockResolvedValue({ count: 2 }) },
     };
     const prisma = {
       $transaction: jest.fn(
@@ -18,7 +39,14 @@ describe('PrismaPaymentRepository', () => {
           callback(transaction),
       ),
     };
-    const repository = new PrismaPaymentRepository(prisma as never);
+    return {
+      repository: new PrismaPaymentRepository(prisma as never),
+      transaction,
+    };
+  }
+
+  it('atomically claims completion, enrolls, and creates notifications', async () => {
+    const { repository, transaction } = setup();
 
     await expect(
       repository.completePaymentAndCreateEnrollment(
@@ -27,32 +55,47 @@ describe('PrismaPaymentRepository', () => {
         'course-1',
         'pi_1',
       ),
-    ).resolves.toBe(payment);
+    ).resolves.toMatchObject({
+      completedNow: true,
+      enrollmentCreated: true,
+    });
 
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(transaction.payment.update).toHaveBeenCalledWith({
-      where: { id: 'payment-1' },
+    expect(transaction.payment.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'payment-1',
+        status: {
+          in: [
+            PaymentStatus.pending,
+            PaymentStatus.failed,
+            PaymentStatus.expired,
+          ],
+        },
+      },
       data: {
         status: PaymentStatus.completed,
         stripePaymentId: 'pi_1',
       },
     });
-    expect(transaction.enrollment.upsert).toHaveBeenCalledWith({
-      where: {
-        studentId_courseId: {
-          studentId: 'user-1',
-          courseId: 'course-1',
-        },
-      },
-      create: { studentId: 'user-1', courseId: 'course-1' },
-      update: {},
+    expect(transaction.enrollment.upsert).toHaveBeenCalledTimes(1);
+    expect(transaction.notification.createMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not duplicate enrollment or notifications after completion', async () => {
+    const { repository, transaction } = setup(false);
+
+    await expect(
+      repository.completePaymentAndCreateEnrollment(
+        'payment-1',
+        'user-1',
+        'course-1',
+        'pi_1',
+      ),
+    ).resolves.toMatchObject({
+      completedNow: false,
+      enrollmentCreated: false,
     });
-    expect(transaction.enrollment.count).toHaveBeenCalledWith({
-      where: { courseId: 'course-1' },
-    });
-    expect(transaction.course.update).toHaveBeenCalledWith({
-      where: { id: 'course-1' },
-      data: { totalStudents: 1 },
-    });
+
+    expect(transaction.enrollment.upsert).not.toHaveBeenCalled();
+    expect(transaction.notification.createMany).not.toHaveBeenCalled();
   });
 });

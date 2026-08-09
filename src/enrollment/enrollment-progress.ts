@@ -8,7 +8,7 @@ export async function hasPassedAllCourseQuizzes(
   courseId: string,
 ): Promise<boolean> {
   const quizzes = await transaction.quiz.findMany({
-    where: { lesson: { section: { courseId } } },
+    where: { courseId },
     select: {
       passingScore: true,
       attempts: {

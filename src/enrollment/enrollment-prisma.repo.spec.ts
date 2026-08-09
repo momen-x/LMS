@@ -7,7 +7,7 @@ describe('PrismaEnrollmentRepository', () => {
     };
     const repository = new PrismaEnrollmentRepository(prisma as never);
 
-    await repository.findByStudentAndCourse('user-1', 'course-1');
+    await repository.findByStudentAndCourseOrNull('user-1', 'course-1');
 
     expect(prisma.enrollment.findUnique).toHaveBeenCalledWith({
       where: {

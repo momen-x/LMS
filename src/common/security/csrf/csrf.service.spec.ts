@@ -25,6 +25,9 @@ describe('CSRF protection', () => {
     for (const method of ['post', 'put', 'patch', 'delete'] as const) {
       app[method]('/unsafe', (_req, res) => res.json({ reached: true }));
     }
+    app.post('/api/payments/webhook', (_req, res) =>
+      res.json({ signatureValidationReached: true }),
+    );
     app.post('/api/payment/webhook', (_req, res) =>
       res.json({ signatureValidationReached: true }),
     );
@@ -70,6 +73,7 @@ describe('CSRF protection', () => {
   it('allows safe GET, the exact Stripe webhook, and Bearer-only requests', async () => {
     const app = createApp();
     await request(app).get('/safe').expect(200);
+    await request(app).post('/api/payments/webhook').expect(200);
     await request(app).post('/api/payment/webhook').expect(200);
     await request(app)
       .post('/unsafe')

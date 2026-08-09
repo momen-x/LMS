@@ -1,4 +1,4 @@
-import { Controller, Post, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Param, UseGuards, Req } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { AuthenticatedUser } from 'src/auth/decorator/authenticated-user.decorator';
@@ -13,7 +13,7 @@ import type { Request } from 'express';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { Roles } from 'src/auth/decorator/user-role.decorator';
 
-@Controller('payment')
+@Controller(['payment', 'payments'])
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
@@ -38,6 +38,17 @@ export class PaymentController {
   ) {
     return this.paymentService.create(user.sub, courseId);
   }
+
+  @Get('checkout/session/:sessionId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  verifyCheckoutSession(
+    @Param('sessionId') sessionId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.paymentService.verifyCheckoutSession(sessionId, user.sub);
+  }
+
   @ApiExcludeEndpoint()
   @Post('webhook')
   async webhook(@Req() req: RawBodyRequest<Request>) {

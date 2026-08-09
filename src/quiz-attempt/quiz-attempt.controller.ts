@@ -43,12 +43,21 @@ export class QuizAttemptController {
     return this.quizAttemptService.startAttempt(user.sub, user.role, quizId);
   }
 
-  @Put('quiz-attempts/:attemptId/answers')
+  @Get('quiz-attempts/:attemptId')
+  getAttempt(
+    @Param('attemptId') attemptId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.quizAttemptService.getAttempt(attemptId, user.sub, user.role);
+  }
+
+  @Put('quiz-attempts/:attemptId/answers/:questionId')
   @ApiOperation({
     summary: 'Create or update an answer in an active attempt',
   })
   saveAnswer(
     @Param('attemptId') attemptId: string,
+    @Param('questionId') questionId: string,
     @Body() dto: SaveAttemptAnswerDto,
     @AuthenticatedUser()
     user: {
@@ -58,6 +67,7 @@ export class QuizAttemptController {
   ) {
     return this.quizAttemptService.saveAnswer(
       attemptId,
+      questionId,
       user.sub,
       user.role,
       dto,
@@ -96,12 +106,5 @@ export class QuizAttemptController {
     },
   ) {
     return this.quizAttemptService.findMyAttempts(user.sub, user.role, quizId);
-  }
-  @Get(':attemptId/answers')
-  getAttemptAnswers(
-    @Param('attemptId') attemptId: string,
-    @AuthenticatedUser() user: { sub: string },
-  ) {
-    return this.quizAttemptService.getAttemptAnswers(attemptId, user.sub);
   }
 }

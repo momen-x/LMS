@@ -18,11 +18,12 @@ describe('EnrollmentService', () => {
   };
 
   function setup() {
-    const enrollmentRepository: any = {
+    const enrollmentRepository = {
       findOne: jest.fn().mockResolvedValue(enrollment),
       hasCompletedPayment: jest.fn().mockResolvedValue(false),
       delete: jest.fn().mockResolvedValue(enrollment),
       findByStudentAndCourse: jest.fn().mockResolvedValue(null),
+      findByStudentAndCourseOrNull: jest.fn().mockResolvedValue(null),
       setLessonCompletion: jest.fn(),
     };
     const userService = {
@@ -38,6 +39,7 @@ describe('EnrollmentService', () => {
       enrollmentRepository as never,
       userService as never,
       courseService as never,
+      { create: jest.fn() } as never,
     );
     return { service, enrollmentRepository };
   }
@@ -99,5 +101,16 @@ describe('EnrollmentService', () => {
     const dto = new UpdateEnrollmentProgressDto();
     dto.progress = progress;
     await expect(validate(dto)).resolves.not.toHaveLength(0);
+  });
+
+  it('does not hide a real database failure while checking enrollment', async () => {
+    const { service, enrollmentRepository } = setup();
+    enrollmentRepository.findByStudentAndCourseOrNull.mockRejectedValue(
+      new Error('database unavailable'),
+    );
+
+    await expect(service.isEnrolled('student-1', 'course-1')).rejects.toThrow(
+      'database unavailable',
+    );
   });
 });
