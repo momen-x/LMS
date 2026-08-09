@@ -7,6 +7,7 @@ describe('QuizService course ownership and question bank validation', () => {
     title: 'Docker Final Quiz',
     questionBankId: 'bank-1',
     questionCount: 2,
+    totalMark: 10,
     passingScore: 70,
     maxAttempts: 3,
     duration: 30,

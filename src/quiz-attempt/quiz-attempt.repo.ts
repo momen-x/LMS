@@ -1,7 +1,7 @@
 import { QuizAttempt, QuizAttemptAnswer } from '@prisma/client';
 
 export type StudentAttemptView = QuizAttempt & {
-  quiz: { id: string; passingScore: number };
+  quiz: { id: string; totalMark: number; passingScore: number };
   questions: Array<{
     order: number;
     question: {

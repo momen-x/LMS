@@ -8,6 +8,7 @@ export class QuizAttempt {
     public attemptNumber: number,
     public status: QuizAttemptStatus,
     public score: number | null,
+    public earnedMark: number | null,
     public correctAnswers: number | null,
     public totalQuestions: number | null,
     public startedAt: Date,

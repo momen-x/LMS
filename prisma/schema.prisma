@@ -272,6 +272,7 @@ model Quiz {
   questionBankId String
   title          String
   questionCount  Int
+  totalMark      Float
   passingScore   Int      @default(50)
   maxAttempts    Int      @default(1)
   duration       Int // minutes
@@ -293,6 +294,7 @@ model QuizAttempt {
   attemptNumber  Int               @default(1)
   status         QuizAttemptStatus @default(in_progress)
   score          Float?
+  earnedMark     Float?
   correctAnswers Int?
   totalQuestions Int?
   startedAt      DateTime          @default(now())

@@ -27,6 +27,10 @@ export class CreateQuizDto {
   @IsInt()
   @Min(1)
   questionCount!: number;
+  @ApiProperty({ example: 10, description: 'Full mark of the quiz' })
+  @IsNumber({ maxDecimalPlaces: 10 })
+  @Min(0.0000000001)
+  totalMark!: number;
   @ApiPropertyOptional()
   @IsNumber()
   @Min(0)

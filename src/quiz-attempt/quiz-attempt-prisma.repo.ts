@@ -10,7 +10,7 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { QuizAttemptRepository, StudentAttemptView } from './quiz-attempt.repo';
 
 const studentViewInclude = {
-  quiz: { select: { id: true, passingScore: true } },
+  quiz: { select: { id: true, totalMark: true, passingScore: true } },
   questions: {
     orderBy: { order: 'asc' as const },
     select: {
@@ -133,7 +133,7 @@ export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
           questions: true,
           answers: { include: { choice: { select: { isCorrect: true } } } },
           quiz: {
-            select: { courseId: true },
+            select: { courseId: true, totalMark: true, passingScore: true },
           },
         },
       });
@@ -152,11 +152,16 @@ export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
       const correctAnswers = attempt.answers.filter(
         (answer) => assigned.has(answer.questionId) && answer.choice.isCorrect,
       ).length;
+      const score = (correctAnswers / totalQuestions) * 100;
+      const earnedMark = Number(
+        ((correctAnswers / totalQuestions) * attempt.quiz.totalMark).toFixed(2),
+      );
       const updated = await tx.quizAttempt.update({
         where: { id },
         data: {
           status: QuizAttemptStatus.submitted,
-          score: (correctAnswers / totalQuestions) * 100,
+          score,
+          earnedMark,
           correctAnswers,
           totalQuestions,
           submittedAt: new Date(),
@@ -172,7 +177,14 @@ export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
         select: { id: true },
       });
       if (enrollment) await syncEnrollmentProgress(tx, enrollment.id);
-      return updated;
+      return {
+        ...updated,
+        quiz: {
+          totalMark: attempt.quiz.totalMark,
+          passingScore: attempt.quiz.passingScore,
+        },
+        passed: score >= attempt.quiz.passingScore,
+      };
     });
   }
   findByStudentAndQuiz(

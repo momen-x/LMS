@@ -10,6 +10,7 @@ describe('QuizAttemptService', () => {
     attemptNumber: 1,
     status: QuizAttemptStatus.in_progress,
     score: null,
+    earnedMark: null,
     correctAnswers: null,
     totalQuestions: null,
     startedAt: new Date(),
@@ -19,7 +20,7 @@ describe('QuizAttemptService', () => {
   };
   const view = {
     ...baseAttempt,
-    quiz: { id: 'quiz-1', passingScore: 50 },
+    quiz: { id: 'quiz-1', totalMark: 10, passingScore: 50 },
     questions: [
       {
         order: 1,
