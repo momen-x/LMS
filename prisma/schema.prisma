@@ -36,6 +36,7 @@ enum MediaType {
   video
   audio
   document
+  url
 }
 
 enum NotificationType {
@@ -174,7 +175,6 @@ model Lesson {
   duration        Int              @default(0)
   order           Int
   isPreview       Boolean          @default(false)
-  resources       Json?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   section         Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
@@ -188,7 +188,7 @@ model Media {
   id                     String    @id @default(cuid())
   lessonId               String
   urlPublicId            String?
-  cloudinaryResourceType String    @default("image")
+  cloudinaryResourceType String?
   url                    String
   type                   MediaType
   duration               Int?
