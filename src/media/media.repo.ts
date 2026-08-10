@@ -8,8 +8,8 @@ export abstract class MediaRepository {
     data: CreateMediaInputs,
     lessonId: string,
     url: string,
-    urlPublicId?: string,
-    cloudinaryResourceType?: CloudinaryResourceType,
+    urlPublicId?: string | null,
+    cloudinaryResourceType?: CloudinaryResourceType | null,
   ): Promise<Media>;
   abstract findAll(): Promise<Media[]>;
   abstract findOne(id: string): Promise<(Media & { lesson: Lesson }) | null>;
@@ -18,8 +18,8 @@ export abstract class MediaRepository {
     id: string,
     data: UpdateMediaInputs,
     url?: string,
-    urlPublicId?: string,
-    cloudinaryResourceType?: CloudinaryResourceType,
+    urlPublicId?: string | null,
+    cloudinaryResourceType?: CloudinaryResourceType | null,
   ): Promise<Media>;
   abstract remove(id: string): Promise<Media>;
 }

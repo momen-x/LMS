@@ -8,6 +8,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   Min,
 } from 'class-validator';
 
@@ -26,4 +27,9 @@ export class CreateMediaDto {
   })
   @IsOptional()
   duration?: number;
+
+  @IsUrl({ require_protocol: true })
+  @IsOptional()
+  @ApiPropertyOptional({ example: 'https://example.com/resource' })
+  url?: string;
 }

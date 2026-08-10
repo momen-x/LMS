@@ -5,6 +5,7 @@ import { Media } from './entities/media.entity';
 import { CreateMediaInputs, UpdateMediaInputs } from './types/media.type';
 import { Lesson } from 'src/lesson/entities/lesson.entity';
 import { CloudinaryResourceType } from 'src/cloudinary/cloudinary.service';
+import { syncLessonDuration } from 'src/common/prisma/course-stats';
 
 @Injectable()
 export class PrismaMediaRepository implements MediaRepository {
@@ -13,17 +14,21 @@ export class PrismaMediaRepository implements MediaRepository {
     data: CreateMediaInputs,
     lessonId: string,
     url: string,
-    urlPublicId?: string,
-    cloudinaryResourceType?: CloudinaryResourceType,
+    urlPublicId?: string | null,
+    cloudinaryResourceType?: CloudinaryResourceType | null,
   ): Promise<Media> {
-    return this.prisma.media.create({
-      data: {
-        ...data,
-        lessonId,
-        url,
-        urlPublicId,
-        cloudinaryResourceType,
-      },
+    return this.prisma.$transaction(async (transaction) => {
+      const media = await transaction.media.create({
+        data: {
+          ...data,
+          lessonId,
+          url,
+          urlPublicId,
+          cloudinaryResourceType,
+        },
+      });
+      await syncLessonDuration(transaction, lessonId);
+      return media;
     });
   }
   findAll(): Promise<Media[]> {
@@ -48,21 +53,31 @@ export class PrismaMediaRepository implements MediaRepository {
     id: string,
     data: UpdateMediaInputs,
     url?: string,
-    urlPublicId?: string,
-    cloudinaryResourceType?: CloudinaryResourceType,
+    urlPublicId?: string | null,
+    cloudinaryResourceType?: CloudinaryResourceType | null,
   ): Promise<Media> {
-    return this.prisma.media.update({
-      where: {
-        id,
-      },
-      data: { ...data, urlPublicId, url, cloudinaryResourceType },
+    return this.prisma.$transaction(async (transaction) => {
+      const existing = await transaction.media.findUniqueOrThrow({
+        where: { id },
+        select: { lessonId: true },
+      });
+      const media = await transaction.media.update({
+        where: { id },
+        data: { ...data, urlPublicId, url, cloudinaryResourceType },
+      });
+      await syncLessonDuration(transaction, existing.lessonId);
+      return media;
     });
   }
   remove(id: string): Promise<Media> {
-    return this.prisma.media.delete({
-      where: {
-        id,
-      },
+    return this.prisma.$transaction(async (transaction) => {
+      const existing = await transaction.media.findUniqueOrThrow({
+        where: { id },
+        select: { lessonId: true },
+      });
+      const media = await transaction.media.delete({ where: { id } });
+      await syncLessonDuration(transaction, existing.lessonId);
+      return media;
     });
   }
 }

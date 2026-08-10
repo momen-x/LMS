@@ -23,6 +23,28 @@ export async function syncCourseContentStats(
   });
 }
 
+export async function syncLessonDuration(
+  transaction: Prisma.TransactionClient,
+  lessonId: string,
+): Promise<void> {
+  const [lesson, durationResult] = await Promise.all([
+    transaction.lesson.findUniqueOrThrow({
+      where: { id: lessonId },
+      select: { section: { select: { courseId: true } } },
+    }),
+    transaction.media.aggregate({
+      where: { lessonId },
+      _sum: { duration: true },
+    }),
+  ]);
+
+  await transaction.lesson.update({
+    where: { id: lessonId },
+    data: { duration: durationResult._sum.duration ?? 0 },
+  });
+  await syncCourseContentStats(transaction, lesson.section.courseId);
+}
+
 export async function syncCourseTotalStudents(
   transaction: Prisma.TransactionClient,
   courseId: string,

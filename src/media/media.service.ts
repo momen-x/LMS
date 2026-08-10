@@ -27,12 +27,32 @@ export class MediaService {
     role: UserRole,
     createMediaDto: CreateMediaDto,
     lessonId: string,
-    file: Express.Multer.File,
+    file?: Express.Multer.File,
   ) {
     await this.validateMediaManagementAccess(userId, role, lessonId);
 
+    const { url, ...mediaData } = createMediaDto;
+    if (createMediaDto.type === 'url') {
+      if (file)
+        throw new BadRequestException('URL media must not include a file');
+      if (!url)
+        throw new BadRequestException('A valid URL is required for URL media');
+      return this.mediaRepo.create(
+        { ...mediaData, duration: undefined },
+        lessonId,
+        url,
+        null,
+        null,
+      );
+    }
+
     if (!file) {
       throw new BadRequestException('Media file is required');
+    }
+    if (url) {
+      throw new BadRequestException(
+        'Uploaded media must not include an external URL',
+      );
     }
 
     const uploadedMedia = await this.cloudinaryService.uploadMedia(
@@ -42,7 +62,7 @@ export class MediaService {
 
     try {
       return await this.mediaRepo.create(
-        createMediaDto,
+        mediaData,
         lessonId,
         uploadedMedia.url,
         uploadedMedia.publicId,
@@ -83,8 +103,38 @@ export class MediaService {
 
     await this.validateMediaManagementAccess(userId, role, media.lessonId);
 
+    const targetType = updateMediaDto.type ?? media.type;
+    const { url, ...mediaData } = updateMediaDto;
+
+    if (targetType === 'url') {
+      if (file)
+        throw new BadRequestException('URL media must not include a file');
+      const directUrl = url ?? (media.type === 'url' ? media.url : undefined);
+      if (!directUrl)
+        throw new BadRequestException('A valid URL is required for URL media');
+      const updatedMedia = await this.mediaRepo.update(
+        id,
+        { ...mediaData, type: targetType, duration: null },
+        directUrl,
+        null,
+        null,
+      );
+      await this.deleteCloudinaryAssetIfPresent(media);
+      return updatedMedia;
+    }
+
+    if (url) {
+      throw new BadRequestException(
+        'Uploaded media must not include an external URL',
+      );
+    }
+    if (media.type === 'url' && !file) {
+      throw new BadRequestException(
+        'A media file is required when changing URL media to an uploaded type',
+      );
+    }
     if (!file) {
-      return this.mediaRepo.update(id, updateMediaDto);
+      return this.mediaRepo.update(id, mediaData);
     }
 
     const uploadedMedia = await this.cloudinaryService.uploadMedia(
@@ -95,18 +145,13 @@ export class MediaService {
     try {
       const updatedMedia = await this.mediaRepo.update(
         id,
-        updateMediaDto,
+        mediaData,
         uploadedMedia.url,
         uploadedMedia.publicId,
         uploadedMedia.resourceType,
       );
 
-      if (media.urlPublicId) {
-        await this.cloudinaryService.deleteFile(
-          media.urlPublicId,
-          media.cloudinaryResourceType as CloudinaryResourceType,
-        );
-      }
+      await this.deleteCloudinaryAssetIfPresent(media);
 
       return updatedMedia;
     } catch (error) {
@@ -126,14 +171,19 @@ export class MediaService {
 
     const deletedMedia = await this.mediaRepo.remove(id);
 
-    if (media.urlPublicId) {
-      await this.cloudinaryService.deleteFile(
-        media.urlPublicId,
-        media.cloudinaryResourceType as CloudinaryResourceType,
-      );
-    }
+    await this.deleteCloudinaryAssetIfPresent(media);
 
     return deletedMedia;
+  }
+  private async deleteCloudinaryAssetIfPresent(media: {
+    urlPublicId: string | null;
+    cloudinaryResourceType: string | null;
+  }) {
+    if (!media.urlPublicId || !media.cloudinaryResourceType) return;
+    await this.cloudinaryService.deleteFile(
+      media.urlPublicId,
+      media.cloudinaryResourceType as CloudinaryResourceType,
+    );
   }
   private async findOrThrow(id: string) {
     const media = await this.mediaRepo.findOne(id);

@@ -70,6 +70,11 @@ export class MediaController {
         duration: {
           type: 'number',
         },
+        url: {
+          type: 'string',
+          format: 'uri',
+          description: 'Required when changing type to url',
+        },
       },
     },
   })
@@ -84,7 +89,7 @@ export class MediaController {
     @Param('id') id: string,
     @Body() updateMediaDto: UpdateMediaDto,
     @AuthenticatedUser() user: { sub: string; role: UserRole },
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
     return this.mediaService.update(
       id,

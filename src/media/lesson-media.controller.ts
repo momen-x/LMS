@@ -9,7 +9,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { MediaService } from './media.service';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { Roles } from 'src/auth/decorator/user-role.decorator';
@@ -31,6 +36,7 @@ export class LessonMediaController {
   @ApiOperation({
     summary: 'Create new media',
   })
+  @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
@@ -46,6 +52,11 @@ export class LessonMediaController {
         duration: {
           type: 'number',
         },
+        url: {
+          type: 'string',
+          format: 'uri',
+          description: 'Required only when type is url',
+        },
       },
     },
   })
@@ -60,7 +71,7 @@ export class LessonMediaController {
     @Param('lessonId') lessonId: string,
     @Body() dto: CreateMediaDto,
     @AuthenticatedUser() user: { sub: string; role: UserRole },
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
     return this.mediaService.create(user.sub, user.role, dto, lessonId, file);
   }
