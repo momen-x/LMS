@@ -26,12 +26,7 @@ export class LessonService {
       role,
       section.courseId,
     );
-    const maxOrder = (await this.lessonRepo.getMaxOrder(sectionId)) + 1;
-    const newLesson = await this.lessonRepo.create(
-      createLessonDto,
-      sectionId,
-      maxOrder,
-    );
+    const newLesson = await this.lessonRepo.create(createLessonDto, sectionId);
     await this.notificationRepo.createCourseInformationNotification(
       section.courseId,
       'New Lesson Added',

@@ -6,10 +6,6 @@ export abstract class SectionRepository {
   abstract find(): Promise<Section[]>;
   abstract findById(id: string): Promise<SectionWithCourse | null>;
   abstract findByCourseId(courseId: string): Promise<Section[]>;
-  abstract findByCourseAndOrder(
-    courseId: string,
-    order: number,
-  ): Promise<Section | null>;
   abstract create(
     data: CreateSectionInputs,
     courseId: string,

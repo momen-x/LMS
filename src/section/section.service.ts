@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -29,16 +28,6 @@ export class SectionService {
   ) {
     await this.validateCourseManagementAccess(instructorId, role, courseId);
 
-    const existingSection = await this.sectionRepo.findByCourseAndOrder(
-      courseId,
-      createSectionDto.order,
-    );
-
-    if (existingSection) {
-      throw new ConflictException(
-        `Section order ${createSectionDto.order} already exists in this course`,
-      );
-    }
     const section = await this.sectionRepo.create(createSectionDto, courseId);
     await this.notificationRepo.createCourseInformationNotification(
       courseId,
@@ -74,22 +63,6 @@ export class SectionService {
       role,
       section.courseId,
     );
-
-    if (
-      updateSectionDto.order !== undefined &&
-      updateSectionDto.order !== section.order
-    ) {
-      const existingSection = await this.sectionRepo.findByCourseAndOrder(
-        section.courseId,
-        updateSectionDto.order,
-      );
-
-      if (existingSection) {
-        throw new ConflictException(
-          `Section order ${updateSectionDto.order} already exists in this course`,
-        );
-      }
-    }
 
     return this.sectionRepo.update(id, updateSectionDto);
   }

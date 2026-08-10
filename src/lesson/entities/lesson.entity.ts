@@ -1,5 +1,3 @@
-import { Prisma } from '@prisma/client';
-type JsonValue = Prisma.JsonValue;
 export class Lesson {
   constructor(
     public id: string,
@@ -9,7 +7,6 @@ export class Lesson {
     public duration: number,
     public order: number,
     public isPreview: boolean,
-    public resources: JsonValue | null,
     public createdAt: Date,
     public updatedAt: Date,
   ) {}

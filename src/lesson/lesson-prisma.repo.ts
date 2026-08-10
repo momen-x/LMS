@@ -38,28 +38,30 @@ export class PrismaLessonRepository implements LessonRepository {
       },
     });
   }
-  async create(
-    data: CreateLessonDto,
-    sectionId: string,
-    order: number,
-  ): Promise<Lesson> {
-    return this.prismaService.$transaction(async (transaction) => {
-      const section = await transaction.section.findUniqueOrThrow({
-        where: { id: sectionId },
-        select: { courseId: true },
-      });
-      const lesson = await transaction.lesson.create({
-        data: {
-          ...data,
-          sectionId,
-          order,
-          resources: data.resources as unknown as
-            Prisma.InputJsonValue | undefined,
-        },
-      });
-      await syncCourseContentStats(transaction, section.courseId);
-      return lesson;
-    });
+  async create(data: CreateLessonDto, sectionId: string): Promise<Lesson> {
+    return this.prismaService.$transaction(
+      async (transaction) => {
+        const section = await transaction.section.findUniqueOrThrow({
+          where: { id: sectionId },
+          select: { courseId: true },
+        });
+        const lastLesson = await transaction.lesson.findFirst({
+          where: { sectionId },
+          orderBy: { order: 'desc' },
+          select: { order: true },
+        });
+        const lesson = await transaction.lesson.create({
+          data: {
+            ...data,
+            sectionId,
+            order: (lastLesson?.order ?? 0) + 1,
+          },
+        });
+        await syncCourseContentStats(transaction, section.courseId);
+        return lesson;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
   async update(id: string, data: UpdateLessonDto): Promise<Lesson> {
     return this.prismaService.$transaction(async (transaction) => {
@@ -69,13 +71,7 @@ export class PrismaLessonRepository implements LessonRepository {
       });
       const lesson = await transaction.lesson.update({
         where: { id },
-        data: {
-          ...data,
-          resources:
-            data.resources === undefined
-              ? undefined
-              : (data.resources as unknown as Prisma.InputJsonValue),
-        },
+        data,
       });
       await syncCourseContentStats(transaction, existing.section.courseId);
       return lesson;
@@ -85,19 +81,22 @@ export class PrismaLessonRepository implements LessonRepository {
     return this.prismaService.$transaction(async (transaction) => {
       const existing = await transaction.lesson.findUniqueOrThrow({
         where: { id },
-        select: { section: { select: { courseId: true } } },
+        select: {
+          order: true,
+          sectionId: true,
+          section: { select: { courseId: true } },
+        },
       });
       const lesson = await transaction.lesson.delete({ where: { id } });
+      await transaction.lesson.updateMany({
+        where: {
+          sectionId: existing.sectionId,
+          order: { gt: existing.order },
+        },
+        data: { order: { decrement: 1 } },
+      });
       await syncCourseContentStats(transaction, existing.section.courseId);
       return lesson;
     });
-  }
-  async getMaxOrder(sectionId: string): Promise<number> {
-    const result = await this.prismaService.lesson.aggregate({
-      where: { sectionId },
-      _max: { order: true },
-    });
-
-    return result._max.order ?? 0;
   }
 }

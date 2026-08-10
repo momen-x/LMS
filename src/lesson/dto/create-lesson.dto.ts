@@ -1,15 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
-import {
-  IsBoolean,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-  ValidateNested,
-} from 'class-validator';
-import { LessonResourceDto } from './lesson-resources.dto';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateLessonDto {
   @IsString()
@@ -22,21 +13,9 @@ export class CreateLessonDto {
   @ApiPropertyOptional()
   description?: string;
 
-  @Transform(({ value }) => Number(value))
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  @ApiPropertyOptional({ example: 12, description: 'Duration in seconds' })
-  duration?: number;
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   @IsOptional()
   @ApiPropertyOptional({ default: false })
   isPreview?: boolean;
-
-  @ValidateNested({ each: true })
-  @Type(() => LessonResourceDto)
-  @IsOptional()
-  @ApiPropertyOptional({ type: [LessonResourceDto] })
-  resources?: LessonResourceDto[];
 }
