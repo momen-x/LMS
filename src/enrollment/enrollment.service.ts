@@ -11,6 +11,7 @@ import { UsersService } from 'src/users/users.service';
 import { CourseService } from 'src/course/course.service';
 import { Prisma, UserRole } from '@prisma/client';
 import { NotificationsService } from 'src/notification/notification.service';
+import { UpdateLearningPositionDto } from './dto/update-learning-position.dto';
 
 @Injectable()
 export class EnrollmentService {
@@ -141,6 +142,40 @@ export class EnrollmentService {
       enrollmentId,
       lessonId,
       completed,
+    );
+  }
+  async updateLearningPosition(
+    userId: string,
+    role: UserRole,
+    enrollmentId: string,
+    position: UpdateLearningPositionDto,
+  ) {
+    if (role !== UserRole.student) {
+      throw new ForbiddenException(
+        'Only students can update learning position',
+      );
+    }
+    const enrollment = await this.findOrThrow(enrollmentId);
+    if (enrollment.studentId !== userId) {
+      throw new ForbiddenException('You do not own this enrollment');
+    }
+    const itemCourseId =
+      await this.enrollmentRepository.findLearningItemCourseId(
+        position.type,
+        position.itemId,
+      );
+    if (!itemCourseId) {
+      throw new NotFoundException('Learning item not found');
+    }
+    if (itemCourseId !== enrollment.courseId) {
+      throw new ForbiddenException(
+        'Learning item does not belong to the enrolled course',
+      );
+    }
+    return this.enrollmentRepository.updateLearningPosition(
+      enrollmentId,
+      position.type,
+      position.itemId,
     );
   }
   private async findOrThrow(id: string) {

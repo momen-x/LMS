@@ -1,4 +1,5 @@
 import { PrismaEnrollmentRepository } from './enrollment-prisma.repo';
+import { LearningItemType } from '@prisma/client';
 
 describe('PrismaEnrollmentRepository', () => {
   it('uses the composite unique key to find an enrollment', async () => {
@@ -41,5 +42,26 @@ describe('PrismaEnrollmentRepository', () => {
       'passwordResetToken',
     );
     expect(query.include.student.select).not.toHaveProperty('providerId');
+  });
+
+  it('updates only the enrollment learning-position fields', async () => {
+    const prisma = {
+      enrollment: { update: jest.fn().mockResolvedValue({}) },
+    };
+    const repository = new PrismaEnrollmentRepository(prisma as never);
+
+    await repository.updateLearningPosition(
+      'enrollment-1',
+      LearningItemType.quiz,
+      'quiz-1',
+    );
+
+    expect(prisma.enrollment.update).toHaveBeenCalledWith({
+      where: { id: 'enrollment-1' },
+      data: {
+        lastLearningType: LearningItemType.quiz,
+        lastLearningItemId: 'quiz-1',
+      },
+    });
   });
 });

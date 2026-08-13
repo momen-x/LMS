@@ -5,12 +5,14 @@ import { UserRole } from '@prisma/client';
 import { LessonRepository } from './lesson.repo';
 import { SectionService } from 'src/section/section.service';
 import { NotificationRepository } from 'src/notification/notification.repo';
+import { CourseService } from 'src/course/course.service';
 
 @Injectable()
 export class LessonService {
   constructor(
     private readonly lessonRepo: LessonRepository,
     private readonly sectionService: SectionService,
+    private readonly CourseService: CourseService,
     private readonly notificationRepo: NotificationRepository,
   ) {}
 
@@ -72,6 +74,10 @@ export class LessonService {
     );
 
     return this.lessonRepo.update(id, updateLessonDto);
+  }
+  async findPreviewLessons(courseId: string) {
+    await this.CourseService.findOne(courseId);
+    return this.lessonRepo.findPreviewLessonsByCourseId(courseId);
   }
   async remove(id: string, userId: string, role: UserRole) {
     const lesson = await this.findOrThrow(id);

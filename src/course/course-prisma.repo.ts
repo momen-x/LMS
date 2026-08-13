@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client';
 import { CourseWhereFilter } from './types/course-query.type';
 import { CreateCourseInput, UpdateCourseInput } from './types/course.type';
 import { InstructorEnrollmentStats } from './types/instructor-enrollment-stats.type';
+import { CourseLearning } from './types/course-learning.type';
 
 @Injectable()
 export class PrismaCourseRepository implements CourseRepository {
@@ -26,6 +27,117 @@ export class PrismaCourseRepository implements CourseRepository {
     });
     return prismaCourse ? this.returnCourse(prismaCourse) : null;
   }
+  async findLearningContent(
+    courseId: string,
+    userId: string,
+  ): Promise<CourseLearning | null> {
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: {
+        id: true,
+        categoryId: true,
+        instructorId: true,
+        title: true,
+        description: true,
+        thumbnail: true,
+        price: true,
+        level: true,
+        status: true,
+        language: true,
+        averageRating: true,
+        totalStudents: true,
+        duration: true,
+        lessonsCount: true,
+        publishedAt: true,
+        sections: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true,
+            title: true,
+            order: true,
+            lessons: {
+              orderBy: { order: 'asc' },
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                duration: true,
+                order: true,
+                isPreview: true,
+                media: {
+                  select: {
+                    id: true,
+                    url: true,
+                    type: true,
+                    duration: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        quizzes: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            title: true,
+            questionCount: true,
+            totalMark: true,
+            passingScore: true,
+            maxAttempts: true,
+            duration: true,
+            attempts: {
+              where: { studentId: userId },
+              orderBy: { attemptNumber: 'asc' },
+              select: {
+                id: true,
+                attemptNumber: true,
+                status: true,
+                score: true,
+                earnedMark: true,
+                correctAnswers: true,
+                totalQuestions: true,
+                startedAt: true,
+                submittedAt: true,
+              },
+            },
+          },
+        },
+        enrollments: {
+          where: { studentId: userId },
+          take: 1,
+          select: {
+            id: true,
+            progress: true,
+            completed: true,
+            enrolledAt: true,
+            completedAt: true,
+            lastLearningType: true,
+            lastLearningItemId: true,
+            lessonProgress: {
+              select: {
+                lessonId: true,
+                completed: true,
+                completedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!course) return null;
+    const { enrollments, ...learningCourse } = course;
+
+    const learningContent: CourseLearning = {
+      ...learningCourse,
+      price: course.price.toNumber(),
+      averageRating: course.averageRating.toNumber(),
+      enrollment: enrollments[0] ?? null,
+    };
+
+    return learningContent;
+  }
   async findByQuery(
     where: CourseWhereFilter,
     skip: number,
@@ -44,6 +156,19 @@ export class PrismaCourseRepository implements CourseRepository {
     // Convert PrismaCourse[] to Course[] entities
     return { courses: courses.map(this.returnCourse), total };
   }
+  async findHighRating(count?: number): Promise<Course[]> {
+    const courses = await this.prisma.course.findMany({
+      where: {
+        status: 'published',
+      },
+      orderBy: {
+        averageRating: 'desc',
+      },
+      take: count ?? 1,
+    });
+    return courses.map(this.returnCourse);
+  }
+
   async findPendingCourses(): Promise<Course[]> {
     const courses = await this.prisma.course.findMany({
       where: { status: 'pending_review' },

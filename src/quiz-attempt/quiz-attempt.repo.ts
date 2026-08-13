@@ -1,7 +1,12 @@
 import { QuizAttempt, QuizAttemptAnswer } from '@prisma/client';
 
 export type StudentAttemptView = QuizAttempt & {
-  quiz: { id: string; totalMark: number; passingScore: number };
+  quiz: {
+    id: string;
+    totalMark: number;
+    passingScore: number;
+    duration: number;
+  };
   questions: Array<{
     order: number;
     question: {
@@ -46,4 +51,8 @@ export abstract class QuizAttemptRepository {
     studentId: string,
     quizId: string,
   ): Promise<QuizAttempt[]>;
+  abstract hasPerfectAttempt(
+    studentId: string,
+    quizId: string,
+  ): Promise<boolean>;
 }

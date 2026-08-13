@@ -3,10 +3,15 @@ import { CourseWhereFilter } from './types/course-query.type';
 import { CreateCourseInput, UpdateCourseInput } from './types/course.type';
 import { InstructorEnrollmentStats } from './types/instructor-enrollment-stats.type';
 import { CourseStatus } from '@prisma/client';
+import { CourseLearning } from './types/course-learning.type';
 
 export abstract class CourseRepository {
   abstract find(skip: number, take: number): Promise<Course[]>;
   abstract findById(id: string): Promise<Course | null>;
+  abstract findLearningContent(
+    courseId: string,
+    userId: string,
+  ): Promise<CourseLearning | null>;
   abstract findByQuery(
     where: CourseWhereFilter,
     skip: number,
@@ -39,4 +44,5 @@ export abstract class CourseRepository {
   abstract getInstructorEnrollmentStats(
     instructorId: string,
   ): Promise<InstructorEnrollmentStats>;
+  abstract findHighRating(count?: number): Promise<Course[]>;
 }

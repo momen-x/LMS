@@ -69,6 +69,23 @@ export class CourseService {
   findOne(id: string) {
     return this.findOrThrow(id);
   }
+  async getLearningContent(courseId: string, userId: string, role: UserRole) {
+    const learningContent = await this.courseRepository.findLearningContent(
+      courseId,
+      userId,
+    );
+    if (!learningContent) throw new NotFoundException('Course not found');
+
+    const isAdmin = role === UserRole.admin;
+    const isOwner = learningContent.instructorId === userId;
+    if (!learningContent.enrollment && !isAdmin && !isOwner) {
+      throw new ForbiddenException(
+        'You must be enrolled in this course to access its learning content',
+      );
+    }
+
+    return learningContent;
+  }
   async findByQuery(dto: QueryCourseDto) {
     const {
       title,
@@ -116,6 +133,9 @@ export class CourseService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+  async findHighRating(count?: number) {
+    return this.courseRepository.findHighRating(count ?? 1);
   }
 
   async update(

@@ -17,6 +17,7 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import multer from 'multer';
 import {
+  ApiBearerAuth,
   ApiBody,
   ApiConsumes,
   ApiOperation,
@@ -89,6 +90,12 @@ export class CourseController {
   })
   findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
     return this.courseService.findAll(page, limit);
+  }
+  @Get('high-rating')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get my reviews' })
+  findMine(@Query('count') count?: number) {
+    return this.courseService.findHighRating(count ?? 1);
   }
   @Get('search')
   @ApiQuery({
@@ -178,6 +185,18 @@ export class CourseController {
   @Roles(UserRole.admin)
   getPendingCourses() {
     return this.courseService.findPendingCourses();
+  }
+
+  @Get(':courseId/learning')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get course learning content and enrollment info' })
+  @ApiResponse({ status: 200, description: 'Course learning content' })
+  @ApiResponse({ status: 403, description: 'User is not enrolled' })
+  getLearningContent(
+    @Param('courseId') courseId: string,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.courseService.getLearningContent(courseId, user.sub, user.role);
   }
 
   @Get(':id')

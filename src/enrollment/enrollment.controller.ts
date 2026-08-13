@@ -3,7 +3,9 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
+  Body,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +18,7 @@ import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 
 import { EnrollmentService } from './enrollment.service';
+import { UpdateLearningPositionDto } from './dto/update-learning-position.dto';
 
 @Controller('enrollments')
 export class EnrollmentController {
@@ -63,8 +66,7 @@ export class EnrollmentController {
     return this.enrollmentService.getUserEnrollmentStats(user.sub);
   }
   @Post(':enrollmentId/lessons/:lessonId/complete')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.student)
+  @UseGuards(JwtAuthGuard)
   completeLesson(
     @Param('enrollmentId') enrollmentId: string,
     @Param('lessonId') lessonId: string,
@@ -79,9 +81,23 @@ export class EnrollmentController {
     );
   }
 
+  @Patch(':enrollmentId/learning-position')
+  @UseGuards(JwtAuthGuard)
+  updateLearningPosition(
+    @Param('enrollmentId') enrollmentId: string,
+    @Body() position: UpdateLearningPositionDto,
+    @AuthenticatedUser() user: { sub: string; role: UserRole },
+  ) {
+    return this.enrollmentService.updateLearningPosition(
+      user.sub,
+      user.role,
+      enrollmentId,
+      position,
+    );
+  }
+
   @Delete(':enrollmentId/lessons/:lessonId/complete')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.student)
+  @UseGuards(JwtAuthGuard)
   uncompleteLesson(
     @Param('enrollmentId') enrollmentId: string,
     @Param('lessonId') lessonId: string,

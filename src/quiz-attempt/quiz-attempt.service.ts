@@ -21,7 +21,20 @@ export class QuizAttemptService {
     const quiz = await this.quizService.findOrThrow(quizId);
     await this.quizService.validateQuizReadAccess(userId, role, quiz.courseId);
     const active = await this.repo.findActiveAttempt(userId, quizId);
-    if (active) return this.mapStudentView(active);
+    if (active) {
+      if (this.isAttemptExpired(active.startedAt, quiz.duration)) {
+        await this.repo.submit(active.id);
+      } else {
+        return this.mapStudentView(active);
+      }
+    }
+    const hasPerfectAttempt = await this.repo.hasPerfectAttempt(userId, quizId);
+
+    if (hasPerfectAttempt) {
+      throw new BadRequestException(
+        'You already achieved a perfect score on this quiz',
+      );
+    }
     if (
       (await this.repo.countStudentAttempts(userId, quizId)) >= quiz.maxAttempts
     )
@@ -52,6 +65,8 @@ export class QuizAttemptService {
     const attempt = await this.findOrThrow(attemptId);
     this.validateAttemptOwnership(attempt.studentId, userId);
     this.validateAttemptIsActive(attempt.status);
+    const quiz = await this.quizService.findOrThrow(attempt.quizId);
+    this.assertAttemptNotExpired(attempt.startedAt, quiz.duration);
     if (!(await this.repo.isQuestionAssigned(attemptId, questionId)))
       throw new BadRequestException(
         'This question is not assigned to this attempt',
@@ -105,6 +120,8 @@ export class QuizAttemptService {
       attemptNumber: attempt.attemptNumber,
       status: attempt.status,
       startedAt: attempt.startedAt,
+      expiresAt: this.getExpiresAt(attempt.startedAt, attempt.quiz.duration),
+      durationMinutes: attempt.quiz.duration,
       questions: attempt.questions.map(({ order, question }) => ({
         id: question.id,
         text: question.text,
@@ -113,5 +130,21 @@ export class QuizAttemptService {
         selectedChoiceId: selected.get(question.id) ?? null,
       })),
     };
+  }
+
+  private isAttemptExpired(startedAt: Date, durationMinutes: number) {
+    if (durationMinutes <= 0) return false;
+    const expiresAt = this.getExpiresAt(startedAt, durationMinutes);
+    return Date.now() >= expiresAt.getTime();
+  }
+
+  private assertAttemptNotExpired(startedAt: Date, durationMinutes: number) {
+    if (this.isAttemptExpired(startedAt, durationMinutes)) {
+      throw new BadRequestException('This quiz attempt has expired');
+    }
+  }
+
+  private getExpiresAt(startedAt: Date, durationMinutes: number) {
+    return new Date(startedAt.getTime() + durationMinutes * 60 * 1000);
   }
 }

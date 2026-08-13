@@ -1,3 +1,4 @@
+import { LearningItemType } from '@prisma/client';
 import { UpdateEnrollmentProgressDto } from './dto/update-enrollment.dto';
 import { Enrollment } from './entities/enrollment.entity';
 import {
@@ -43,6 +44,15 @@ export abstract class EnrollmentRepository {
     averageProgress: number;
   }>;
   abstract findLessonCourseId(lessonId: string): Promise<string | null>;
+  abstract findLearningItemCourseId(
+    type: LearningItemType,
+    itemId: string,
+  ): Promise<string | null>;
+  abstract updateLearningPosition(
+    enrollmentId: string,
+    type: LearningItemType,
+    itemId: string,
+  ): Promise<Enrollment>;
   abstract setLessonCompletion(
     enrollmentId: string,
     lessonId: string,

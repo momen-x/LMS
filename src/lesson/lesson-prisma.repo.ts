@@ -8,6 +8,11 @@ import { Prisma } from '@prisma/client';
 import { Section } from 'src/section/entities/section.entity';
 import { syncCourseContentStats } from 'src/common/prisma/course-stats';
 
+export type PreviewLesson = Prisma.LessonGetPayload<{
+  include: {
+    media: true;
+  };
+}>;
 @Injectable()
 export class PrismaLessonRepository implements LessonRepository {
   constructor(private readonly prismaService: PrismaService) {}
@@ -18,6 +23,7 @@ export class PrismaLessonRepository implements LessonRepository {
       },
     });
   }
+
   findOne(id: string): Promise<(Lesson & { section: Section }) | null> {
     return this.prismaService.lesson.findUnique({
       where: {
@@ -98,5 +104,40 @@ export class PrismaLessonRepository implements LessonRepository {
       await syncCourseContentStats(transaction, existing.section.courseId);
       return lesson;
     });
+  }
+  async findPreviewLessonsByCourseId(courseId: string): Promise<{
+    lessons: PreviewLesson[];
+    count: number;
+  }> {
+    const where: Prisma.LessonWhereInput = {
+      isPreview: true,
+      section: {
+        courseId,
+      },
+    };
+
+    const [lessons, count] = await this.prismaService.$transaction([
+      this.prismaService.lesson.findMany({
+        where,
+        include: {
+          media: true,
+        },
+        orderBy: [
+          {
+            section: {
+              order: 'asc',
+            },
+          },
+          {
+            order: 'asc',
+          },
+        ],
+      }),
+      this.prismaService.lesson.count({
+        where,
+      }),
+    ]);
+
+    return { lessons, count };
   }
 }

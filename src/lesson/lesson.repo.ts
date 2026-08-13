@@ -1,6 +1,7 @@
 import { Section } from 'src/section/entities/section.entity';
 import { Lesson } from './entities/lesson.entity';
 import { CreateLessonInput, UpdateLessonInput } from './types/lesson.type';
+import { PreviewLesson } from './lesson-prisma.repo';
 
 export abstract class LessonRepository {
   abstract find(): Promise<Lesson[]>;
@@ -9,4 +10,8 @@ export abstract class LessonRepository {
   abstract create(dto: CreateLessonInput, sectionId: string): Promise<Lesson>;
   abstract update(id: string, dto: UpdateLessonInput): Promise<Lesson>;
   abstract remove(id: string): Promise<Lesson>;
+  abstract findPreviewLessonsByCourseId(courseId: string): Promise<{
+    lessons: PreviewLesson[];
+    count: number;
+  }>;
 }

@@ -43,23 +43,19 @@ describe('QuizAttemptService', () => {
       isQuestionAssigned: jest.fn().mockResolvedValue(true),
       choiceBelongsToQuestion: jest.fn().mockResolvedValue(true),
       saveAnswer: jest.fn().mockResolvedValue({ choiceId: 'c1' }),
-      submit: jest
-        .fn()
-        .mockResolvedValue({
-          ...baseAttempt,
-          status: QuizAttemptStatus.submitted,
-          score: 100,
-        }),
+      submit: jest.fn().mockResolvedValue({
+        ...baseAttempt,
+        status: QuizAttemptStatus.submitted,
+        score: 100,
+      }),
       findByStudentAndQuiz: jest.fn().mockResolvedValue([]),
     };
     const quizService = {
-      findOrThrow: jest
-        .fn()
-        .mockResolvedValue({
-          id: 'quiz-1',
-          courseId: 'course-1',
-          maxAttempts: 2,
-        }),
+      findOrThrow: jest.fn().mockResolvedValue({
+        id: 'quiz-1',
+        courseId: 'course-1',
+        maxAttempts: 2,
+      }),
       validateQuizReadAccess: jest.fn().mockResolvedValue(undefined),
     };
     return {
@@ -154,5 +150,46 @@ describe('QuizAttemptService', () => {
     await expect(
       service.startAttempt('student-1', UserRole.student, 'quiz-1'),
     ).rejects.toThrow('maximum');
+  });
+
+  it('rejects answer changes after the quiz duration has expired', async () => {
+    const { service, repo, quizService } = create();
+    repo.findOne.mockResolvedValue({
+      ...baseAttempt,
+      startedAt: new Date(Date.now() - 61 * 60 * 1000),
+    });
+    quizService.findOrThrow.mockResolvedValue({
+      id: 'quiz-1',
+      courseId: 'course-1',
+      duration: 30,
+    });
+
+    await expect(
+      service.saveAnswer('attempt-1', 'q1', 'student-1', UserRole.student, {
+        choiceId: 'c1',
+      }),
+    ).rejects.toThrow('expired');
+  });
+
+  it('auto-submits an expired active attempt before creating a new one', async () => {
+    const { service, repo, quizService } = create();
+    repo.findActiveAttempt.mockResolvedValue({
+      ...view,
+      startedAt: new Date(Date.now() - 61 * 60 * 1000),
+    });
+    quizService.findOrThrow.mockResolvedValue({
+      id: 'quiz-1',
+      courseId: 'course-1',
+      duration: 30,
+      maxAttempts: 2,
+    });
+    repo.submit.mockResolvedValue({
+      ...baseAttempt,
+      status: QuizAttemptStatus.submitted,
+    });
+
+    await service.startAttempt('student-1', UserRole.student, 'quiz-1');
+
+    expect(repo.submit).toHaveBeenCalledWith('attempt-1');
   });
 });

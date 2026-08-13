@@ -59,6 +59,11 @@ enum QuizAttemptStatus {
   submitted
 }
 
+enum LearningItemType {
+  lesson
+  quiz
+}
+
 model User {
   id                       String       @id @default(cuid())
   name                     String
@@ -199,15 +204,17 @@ model Media {
 }
 
 model Enrollment {
-  id          String    @id @default(cuid())
-  studentId   String
-  courseId    String
-  progress    Float     @default(0)
-  completed   Boolean   @default(false)
-  enrolledAt  DateTime  @default(now())
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                 String            @id @default(cuid())
+  studentId          String
+  courseId           String
+  progress           Float             @default(0)
+  completed          Boolean           @default(false)
+  enrolledAt         DateTime          @default(now())
+  completedAt        DateTime?
+  lastLearningType   LearningItemType?
+  lastLearningItemId String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   student        User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
   course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)

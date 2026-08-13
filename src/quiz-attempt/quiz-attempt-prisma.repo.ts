@@ -10,7 +10,9 @@ import { PrismaService } from 'src/infrastructure/prisma/prisma.service';
 import { QuizAttemptRepository, StudentAttemptView } from './quiz-attempt.repo';
 
 const studentViewInclude = {
-  quiz: { select: { id: true, totalMark: true, passingScore: true } },
+  quiz: {
+    select: { id: true, totalMark: true, passingScore: true, duration: true },
+  },
   questions: {
     orderBy: { order: 'asc' as const },
     select: {
@@ -195,5 +197,22 @@ export class PrismaQuizAttemptRepository implements QuizAttemptRepository {
       where: { studentId, quizId },
       orderBy: { attemptNumber: 'desc' },
     });
+  }
+  async hasPerfectAttempt(studentId: string, quizId: string): Promise<boolean> {
+    const attempt = await this.prisma.quizAttempt.findFirst({
+      where: {
+        studentId,
+        quizId,
+        status: 'submitted',
+        score: {
+          gte: 100,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return Boolean(attempt);
   }
 }

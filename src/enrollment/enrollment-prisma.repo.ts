@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PaymentStatus } from '@prisma/client';
+import { LearningItemType, PaymentStatus } from '@prisma/client';
 import { UpdateEnrollmentProgressDto } from './dto/update-enrollment.dto';
 import {
   CreateEnrollmentInput,
@@ -197,6 +197,35 @@ export class PrismaEnrollmentRepository implements EnrollmentRepository {
       select: { section: { select: { courseId: true } } },
     });
     return lesson?.section.courseId ?? null;
+  }
+
+  async findLearningItemCourseId(
+    type: LearningItemType,
+    itemId: string,
+  ): Promise<string | null> {
+    if (type === LearningItemType.lesson) {
+      return this.findLessonCourseId(itemId);
+    }
+
+    const quiz = await this.prisma.quiz.findUnique({
+      where: { id: itemId },
+      select: { courseId: true },
+    });
+    return quiz?.courseId ?? null;
+  }
+
+  updateLearningPosition(
+    enrollmentId: string,
+    type: LearningItemType,
+    itemId: string,
+  ): Promise<Enrollment> {
+    return this.prisma.enrollment.update({
+      where: { id: enrollmentId },
+      data: {
+        lastLearningType: type,
+        lastLearningItemId: itemId,
+      },
+    });
   }
 
   setLessonCompletion(
