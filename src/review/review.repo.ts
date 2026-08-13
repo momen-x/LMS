@@ -33,4 +33,8 @@ export abstract class ReviewRepository {
   abstract getCourseRatingAggregate(
     courseId: string,
   ): Promise<CourseRatingAggregate>;
+  abstract getReviewByCourseAndStudent(
+    courseId: string,
+    studentId: string,
+  ): Promise<Review | null>;
 }

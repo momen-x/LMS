@@ -110,6 +110,14 @@ export class PrismaReviewRepository implements ReviewRepository {
       totalReviews: aggregate._count._all,
     };
   }
+  async getReviewByCourseAndStudent(
+    courseId: string,
+    studentId: string,
+  ): Promise<Review | null> {
+    return this.prisma.review.findFirst({
+      where: { courseId, studentId },
+    });
+  }
 
   private async refreshCourseRating(
     transaction: Prisma.TransactionClient,

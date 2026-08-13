@@ -47,4 +47,14 @@ export class UsersEnrollmentCourse {
     );
     return this.enrollmentService.findCourseStudent(courseId);
   }
+  @Get('me')
+  @ApiOperation({ summary: 'Get all enrollments for a course' })
+  @ApiResponse({ status: 200, description: 'Get all enrollments for a course' })
+  @UseGuards(JwtAuthGuard)
+  getMyEnrollmentByCourse(
+    @AuthenticatedUser() user: { sub: string },
+    @Param('courseId') courseId: string,
+  ) {
+    return this.enrollmentService.findByStudentAndCourse(user.sub, courseId);
+  }
 }

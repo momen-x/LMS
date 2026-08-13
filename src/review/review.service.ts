@@ -37,7 +37,15 @@ export class ReviewService {
       throw new ForbiddenException('You cannot review your own course');
     }
     try {
-      await this.enrollmentService.findByStudentAndCourse(userId, courseId);
+      const enrollment = await this.enrollmentService.findByStudentAndCourse(
+        userId,
+        courseId,
+      );
+      if (enrollment && enrollment.progress < 50) {
+        throw new ForbiddenException(
+          'You must complete at least 50% of the course to review it',
+        );
+      }
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw new ForbiddenException(
@@ -104,7 +112,14 @@ export class ReviewService {
     );
     return this.toPaginated(result.data, result.total, page, limit);
   }
-
+  async findByStudentAndCourse(studentId: string, courseId: string) {
+    const review = await this.reviewRepository.findByStudentAndCourse(
+      studentId,
+      courseId,
+    );
+    if (!review) throw new NotFoundException('Review not found');
+    return review;
+  }
   async findOne(id: string): Promise<Review> {
     const review = await this.reviewRepository.findById(id);
     if (!review) throw new NotFoundException('Review not found');

@@ -45,4 +45,14 @@ export class CourseReviewController {
   ) {
     return this.reviewService.findByCourseId(courseId, query.page, query.limit);
   }
+  @Get('me')
+  @ApiOperation({ summary: 'Get my reviews' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  findMine(
+    @AuthenticatedUser() user: { sub: string },
+    @Query('courseId') courseId: string,
+  ) {
+    return this.reviewService.findByStudentAndCourse(user.sub, courseId);
+  }
 }
