@@ -14,6 +14,7 @@ import { Roles } from 'src/auth/decorator/user-role.decorator';
 import { JwtAuthGuard } from 'src/auth/guard/UseGuards.guard';
 import { RolesGuard } from 'src/auth/guard/user-guard.guard';
 import { CertificateService } from './certificate.service';
+import { Certificate } from './entities/certificate.entity';
 
 @ApiTags('certificates')
 @Controller('courses/:courseId/certificates')
@@ -84,16 +85,16 @@ export class CertificateController {
   }
   @Get('student/:studentId')
   @Roles(UserRole.instructor, UserRole.admin)
-  @ApiOperation({ summary: 'Find certificates for a specific student' })
+  @ApiOperation({ summary: 'Find a certificate for a student in this course' })
   @ApiResponse({
     status: 200,
-    description: 'List of certificates for the student',
+    description: 'Certificate for the student in this course',
   })
   async findByStudentId(
     @Param('courseId') courseId: string,
     @Param('studentId') studentId: string,
     @AuthenticatedUser() user: { sub: string; role: UserRole },
-  ) {
+  ): Promise<Certificate | null> {
     return this.certificateService.findByStudentId(
       studentId,
       user.sub,

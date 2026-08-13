@@ -12,6 +12,7 @@ import { randomUUID } from 'crypto';
 import { UsersService } from 'src/users/users.service';
 import { NotificationsService } from 'src/notification/notification.service';
 import { CourseService } from 'src/course/course.service';
+import { Certificate } from './entities/certificate.entity';
 
 @Injectable()
 export class CertificateService {
@@ -42,7 +43,7 @@ export class CertificateService {
     if (!enrollment) {
       throw new Error('Student not enrolled in the course');
     }
-    if (!enrollment.completed && enrollment.progress < 100)
+    if (!enrollment.completed)
       throw new BadRequestException('Student not completed the course');
 
     const certificateNumber = `CERT-${new Date().getFullYear()}-${randomUUID().slice(0, 8).toUpperCase()}`;
@@ -127,18 +128,32 @@ export class CertificateService {
       certificateNumber,
     );
   }
+  async publicFindByCertificateNumber(certificateNumber: string) {
+    const certificate =
+      await this.certificateRepository.publicFindByCertificateNumber(
+        certificateNumber,
+      );
+    if (!certificate) throw new NotFoundException('Certificate not found');
+    return certificate;
+  }
+  async findOneByCertificateId(id: string) {
+    return this.findOrThrow(id);
+  }
   async findByStudentId(
     studentId: string,
     instructorId: string,
     role: UserRole,
     courseId: string,
-  ) {
+  ): Promise<Certificate | null> {
     await this.enrollmentService.validateInstructorOwnerCourse(
       instructorId,
       role,
       courseId,
     );
-    return this.certificateRepository.findByStudentId(studentId);
+    return this.certificateRepository.findByStudentAndCourse(
+      studentId,
+      courseId,
+    );
   }
   async findStudentCertificate(studentId: string) {
     await this.userService.findOne(studentId);

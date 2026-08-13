@@ -46,3 +46,48 @@ describe('CertificateService notifications', () => {
     });
   });
 });
+
+describe('CertificateService.findByStudentId', () => {
+  it('returns only the certificate for the requested student and course', async () => {
+    const certificate = {
+      id: 'certificate-1',
+      studentId: 'student-1',
+      courseId: 'course-1',
+    };
+    const certificateRepository: any = {
+      findByStudentAndCourse: jest.fn().mockResolvedValue(certificate),
+      findByStudentId: jest.fn(),
+    };
+    const enrollmentService = {
+      validateInstructorOwnerCourse: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new CertificateService(
+      certificateRepository,
+      enrollmentService as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    const result = await service.findByStudentId(
+      'student-1',
+      'instructor-1',
+      UserRole.instructor,
+      'course-1',
+    );
+
+    expect(
+      enrollmentService.validateInstructorOwnerCourse,
+    ).toHaveBeenCalledWith(
+      'instructor-1',
+      UserRole.instructor,
+      'course-1',
+    );
+    expect(certificateRepository.findByStudentAndCourse).toHaveBeenCalledWith(
+      'student-1',
+      'course-1',
+    );
+    expect(certificateRepository.findByStudentId).not.toHaveBeenCalled();
+    expect(result).toBe(certificate);
+  });
+});

@@ -9,7 +9,6 @@ import { Roles } from 'src/auth/decorator/user-role.decorator';
 
 @ApiTags('Certificates')
 @Controller('certificates')
-@UseGuards(JwtAuthGuard)
 export class UserCertificatesController {
   constructor(private readonly certificateService: CertificateService) {}
 
@@ -22,6 +21,7 @@ export class UserCertificatesController {
   }
   @Get('me/count')
   @ApiOperation({ summary: 'Count my certificates' })
+  @UseGuards(JwtAuthGuard)
   countMyCertificates(@AuthenticatedUser() user: { sub: string }) {
     return this.certificateService.countMine(user.sub);
   }
@@ -42,5 +42,22 @@ export class UserCertificatesController {
   @Roles(UserRole.admin)
   findUserCertificates(@Param('userId') userId: string) {
     return this.certificateService.findStudentCertificate(userId);
+  }
+  @Get('public/:certificateNumber')
+  @ApiOperation({ summary: 'Find a certificate by its number' })
+  @ApiQuery({ name: 'certificateNumber', required: true, type: String })
+  getByCertificateNumber(
+    @Param('certificateNumber') certificateNumber: string,
+  ) {
+    return this.certificateService.publicFindByCertificateNumber(
+      certificateNumber,
+    );
+  }
+  @Get(':certificateId')
+  @ApiOperation({ summary: 'Get a single certificate by ID' })
+  @ApiResponse({ status: 200, description: 'Certificate details' })
+  @UseGuards(JwtAuthGuard)
+  findOne(@Param('certificateId') id: string) {
+    return this.certificateService.findOneByCertificateId(id);
   }
 }
