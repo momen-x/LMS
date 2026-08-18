@@ -76,7 +76,7 @@ export function createCsrfConfig(
   const generateCsrfToken = (req: Request, res: Response): string =>
     doubleCsrfUtilities.generateCsrfToken(req, res, {
       overwrite: false,
-      validateOnReuse: true,
+      validateOnReuse: false,
     });
 
   const getCsrfTokenFromRequest = (req: Request): string | undefined => {
