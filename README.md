@@ -1258,7 +1258,7 @@ The final implementation, coding decisions, testing, integration, deployment, an
 
 <div align="center">
 
-### Built by Mazen with ChatGPT as an engineering collaborator.
+### Built by Mom'en with ChatGPT as an engineering collaborator.
 
 **From authentication to verified course completion — designed as one connected backend system.**
 
